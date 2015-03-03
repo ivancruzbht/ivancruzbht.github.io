@@ -7,7 +7,9 @@ sharing: false
 footer: false
 ---
 
-My name is Iván Omar (IO) Cruz ("cross" or "X" in spanish), hence io-x. Clever uh? I know that an "X" is technically a saltire so don't get too picky. I enjoy learning whatever I can. I mainly study stuff related to natural language processing, machine learning, artificial intelligence, opinion mining and data science. I know a little bit of CS in general.
+My name is Iván Omar (IO) Cruz ("cross" or "X" in spanish), hence io-x. Clever uh? I know that an "X" is technically a saltire so don't get too picky. 
+
+I enjoy learning whatever I can. I mainly study stuff related to natural language processing, machine learning, artificial intelligence, opinion mining and data science. I know a little bit of CS in general.
 
 I am the founder of <a href="http://sentimentdynamics.com">sentimentdynamics.com</a>. It is an API for opinion mining. Go and check it out!
 

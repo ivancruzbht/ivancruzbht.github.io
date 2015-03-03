@@ -9,11 +9,14 @@
     @include transition(.5s);
   }
   > footer {
-    height: 11em;
+    height: 8em;
   }
   > footer > .content {
-    padding: 2em 13em 0 13em;
+    padding: 3em 2em 0 13em;
     @include transition(.5s);
+    font-weight: lighter;
+    font-family: $sans;
+    text-align: right
   }
 }
 

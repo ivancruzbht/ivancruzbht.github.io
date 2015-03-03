@@ -12,6 +12,7 @@
   border: $border;
 }
 
+
 @mixin selection($bg, $color: inherit, $text-shadow: none){
   * {
     &::-moz-selection { background: $bg; color: $color; text-shadow: $text-shadow; }
