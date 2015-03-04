@@ -6,7 +6,7 @@ comments: true
 categories: optimization
 ---
 
-Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. 
+GGaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. 
 
 <!-- more -->
 
