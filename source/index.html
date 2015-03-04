@@ -10,7 +10,7 @@ layout: default
 <ul class="blog-index">
   {% for post in paginator.posts %}
     {% assign first = 'false' %}
-    {% if forloop.index == 1 %}
+    {% if forloop.index < 5 %}
       {% assign first = 'true' %}
       {% assign content = post.content %}
     {% endif %}

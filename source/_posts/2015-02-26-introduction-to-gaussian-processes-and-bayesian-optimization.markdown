@@ -3,10 +3,10 @@ layout: post
 title: "Introduction to Gaussian Processes and Bayesian Optimization (Part 1)"
 date: 2015-02-26 22:21:22 -0800
 comments: true
-categories: 
+categories: optimization
 ---
 
-Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers	. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. 
+Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. 
 
 <!-- more -->
 
@@ -171,7 +171,7 @@ How to get $$\mu$$? Lets look at the next figure:
 
 <p align="center">{% img center /images/bayesian_optimization/nd_5.png 600 450%}</p>
 
-The value of $$\mu$$ is where the probability is the highest. The red line represents the tangent at that point and its slope is 0. Therefore the value of $$\mu$$ is where the derivative of the probability function is 0. Converting the Gaussian distribution probability function to logarithmic space to facilitate the math, doing a bunch of derivations and setting the derivate to zero, $$\mu$$ is:
+The value of $$\mu$$ is where the probability is the highest. The red line represents the tangent at that point and its slope is 0. Therefore the value of $$\mu$$ is where the derivative of the probability function is 0. Converting the Gaussian probability distribution function to logarithmic space to facilitate the math, doing a bunch of derivations and setting the derivate to zero, $$\mu$$ is:
 
 $$\mu_{ML}=\frac{1}{N}\sum_{n=1}^{N}x_{n}$$
 
