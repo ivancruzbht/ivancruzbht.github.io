@@ -1,0 +1,652 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Introduction to Gaussian Processes and Bayesian Optimization (Part 3) - Ivan Cruz Blog</title>
+  <meta name="author" content="Ivan Cruz">
+
+  
+  <meta name="description" content="In this entry I’ll explain regression and how it is related to Gaussian processes. In simple terms, regression is a statistic approach to infer a &hellip;">
+  
+
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  
+  <link rel="canonical" href="http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ivan Cruz Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Source+Serif+Pro' rel='stylesheet' type='text/css'>
+
+<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-60296239-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <div id="sidebar_control"></div>
+  <div id="sidebar">
+    <div class="logo">
+      io-x
+    </div>
+    <div class="content hide">
+      <section role="navigation">
+        <header role="banner"><hgroup>
+	<style type="text/css">
+		.circular img {
+			width: 100px;
+			height: 100px;
+			border-radius: 150px;
+			-webkit-border-radius: 150px;
+			-moz-border-radius: 150px;
+			display: block;
+			margin: 0px 0px 20px 20px;
+			background-color: #b0c4de;
+		}
+	</style>
+
+	<span>
+		<div class="circular">
+			<img class="left" src="/images/yo5.jpg" width="200" height="200" title="image" alt="images">
+		</div>
+	</span>
+
+  <h1><a href="/">Ivan Cruz Blog</a></h1>
+  
+    <h2>A quest of natural language processing, machine learning and random CS</h2>
+  
+</hgroup>
+
+</header>
+        
+<ul class="main-navigation">
+  <li><a href="/">Home</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+
+      </section>
+      
+        <section>
+    <a href="https://www.twitter.com/blackhattrick">
+    	<i class="fa fa-twitter sidebar"></i>
+    </a>
+    <a href="http://mx.linkedin.com/pub/ivan-cruz/ab/370/697/es">
+    	<i class="fa fa-linkedin sidebar"></i>
+    </a>
+    <a href="https://github.com/ivancruzbht">
+    	<i class="fa fa-github sidebar"></i>
+    </a>
+    <a href="mailto:ivancruz.bht@gmail.com">
+    	<i class="fa fa-envelope sidebar"></i>
+    </a>
+</section>
+
+
+      
+    </div>
+  </div>
+  <div id="main">
+    <div class="content">
+      <article class="hentry" role="article">
+  
+  
+    <header>
+      <div class="back"><a href="/" onclick="history.go(-1);return false;">← Back</a></div>
+      <h1 class="entry-title">Introduction to Gaussian Processes and Bayesian Optimization (Part 3)</h1>
+    </header>
+  
+  <div class="entry-content"><p>In this entry I’ll explain regression and how it is related to Gaussian processes. </p>
+
+<p>In simple terms, regression is a statistic approach to infer a model of the relationship between variables. Namely, it is the relation of independent variables (the input) and a dependent variable (the output).</p>
+
+<!-- more -->
+
+<p>In the context of machine learning, given a bunch of training data, the goal is to compute a model that explains the data.</p>
+
+<p>An example would be linear regression. This method tries to describe the data with a lineal function by minimizing the distance between each point and the function hyperplane. For a 2-dimensional space, the function is a line:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/lr_1.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+<a href="#n26" name="n26">26</a>
+<a href="#n27" name="n27">27</a>
+<a href="#n28" name="n28">28</a>
+<a href="#n29" name="n29">29</a>
+<strong><a href="#n30" name="n30">30</a></strong>
+<a href="#n31" name="n31">31</a>
+<a href="#n32" name="n32">32</a>
+<a href="#n33" name="n33">33</a>
+<a href="#n34" name="n34">34</a>
+<a href="#n35" name="n35">35</a>
+<a href="#n36" name="n36">36</a>
+<a href="#n37" name="n37">37</a>
+<a href="#n38" name="n38">38</a>
+<a href="#n39" name="n39">39</a>
+<strong><a href="#n40" name="n40">40</a></strong>
+<a href="#n41" name="n41">41</a>
+<a href="#n42" name="n42">42</a>
+<a href="#n43" name="n43">43</a>
+<a href="#n44" name="n44">44</a>
+<a href="#n45" name="n45">45</a>
+<a href="#n46" name="n46">46</a>
+<a href="#n47" name="n47">47</a>
+<a href="#n48" name="n48">48</a>
+</pre></td>
+  <td class="code"><pre><span class="comment"># http://scikit-learn.org/stable/auto_examples/linear_model/plot_ols.html</span>
+<span class="comment"># Code source: Jaques Grobler</span>
+<span class="comment"># License: BSD 3 clause</span>
+
+
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">sklearn</span> <span class="keyword">import</span> <span class="include">datasets</span>, <span class="include">linear_model</span>
+
+<span class="comment"># Load the diabetes dataset</span>
+diabetes = datasets.load_diabetes()
+
+
+<span class="comment"># Use only one feature</span>
+diabetes_X = diabetes.data[:, np.newaxis]
+diabetes_X_temp = diabetes_X[:, :, <span class="integer">2</span>]
+
+<span class="comment"># Split the data into training/testing sets</span>
+diabetes_X_train = diabetes_X_temp[:-<span class="integer">20</span>]
+diabetes_X_test = diabetes_X_temp[-<span class="integer">20</span>:]
+
+<span class="comment"># Split the targets into training/testing sets</span>
+diabetes_y_train = diabetes.target[:-<span class="integer">20</span>]
+diabetes_y_test = diabetes.target[-<span class="integer">20</span>:]
+
+<span class="comment"># Create linear regression object</span>
+regr = linear_model.LinearRegression()
+
+<span class="comment"># Train the model using the training sets</span>
+regr.fit(diabetes_X_train, diabetes_y_train)
+
+<span class="comment"># The coefficients</span>
+print(<span class="string"><span class="delimiter">'</span><span class="content">Coefficients: </span><span class="char">\n</span><span class="delimiter">'</span></span>, regr.coef_)
+<span class="comment"># The mean square error</span>
+print(<span class="string"><span class="delimiter">&quot;</span><span class="content">Residual sum of squares: %.2f</span><span class="delimiter">&quot;</span></span>
+      % np.mean((regr.predict(diabetes_X_test) - diabetes_y_test) ** <span class="integer">2</span>))
+<span class="comment"># Explained variance score: 1 is perfect prediction</span>
+print(<span class="string"><span class="delimiter">'</span><span class="content">Variance score: %.2f</span><span class="delimiter">'</span></span> % regr.score(diabetes_X_test, diabetes_y_test))
+
+<span class="comment"># Plot outputs</span>
+plt.scatter(diabetes_X_test, diabetes_y_test,  color=<span class="string"><span class="delimiter">'</span><span class="content">black</span><span class="delimiter">'</span></span>)
+plt.plot(diabetes_X_test, regr.predict(diabetes_X_test), color=<span class="string"><span class="delimiter">'</span><span class="content">blue</span><span class="delimiter">'</span></span>,
+         linewidth=<span class="integer">3</span>)
+
+plt.xticks(())
+plt.yticks(())
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>It is possible to obtain a non-linear regression estimator using Gaussian distributions. For example, suppose you are given some data described by the following graphic:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/lr_2.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+x = np.array([<span class="integer">1</span>,<span class="integer">2</span>,<span class="integer">3</span>]);
+y = np.array([<span class="integer">2</span>,<span class="integer">3</span>,<span class="integer">6</span>]);
+plt.scatter(x,y)
+plt.xlim([<span class="integer">0</span>,<span class="integer">10</span>])
+plt.ylim([<span class="integer">0</span>,<span class="integer">10</span>])
+
+plt.axes().get_xaxis().set_ticks([])
+plt.axes().get_yaxis().set_ticks([])
+
+i = <span class="integer">1</span>
+<span class="keyword">for</span> xy <span class="keyword">in</span> <span class="predefined">zip</span>(x,y):
+    plt.annotate(<span class="string"><span class="delimiter">'</span><span class="content">X{}</span><span class="delimiter">'</span></span>.format(i),xy=(xy[<span class="integer">0</span>],<span class="integer">0</span>),xytext=(xy[<span class="integer">0</span>],-<span class="float">0.5</span>))
+    plt.annotate(<span class="string"><span class="delimiter">'</span><span class="content">Y{}</span><span class="delimiter">'</span></span>.format(i),xy=(<span class="integer">0</span>,xy[<span class="integer">1</span>]), xytext=(-<span class="float">0.5</span>,xy[<span class="integer">1</span>]))
+
+    plt.plot([xy[<span class="integer">0</span>], xy[<span class="integer">0</span>]], [<span class="integer">0</span>, xy[<span class="integer">1</span>]], <span class="string"><span class="delimiter">'</span><span class="content">k:</span><span class="delimiter">'</span></span>)
+    plt.plot([<span class="integer">0</span>, xy[<span class="integer">0</span>]], [xy[<span class="integer">1</span>], xy[<span class="integer">1</span>]], <span class="string"><span class="delimiter">'</span><span class="content">k:</span><span class="delimiter">'</span></span>)
+    i+=<span class="integer">1</span>
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The values of the each point are given (<script type="math/tex">X</script> and <script type="math/tex">f</script>) and we want to model the random variable <script type="math/tex">f</script> in relation with <script type="math/tex">X</script>. We can assume that <script type="math/tex">f</script> can be modeled with a multivariate Gaussian distribution, i.e., each point has a Gaussian distribution by itself. For simplicity, lets say that this distribution has zero mean:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+
+\begin{bmatrix}
+f_{1}\\ 
+f_{2}\\ 
+f_{3}
+\end{bmatrix}\sim\mathcal{N}\left ( \begin{bmatrix}
+0\\0\\0
+\end{bmatrix},
+\begin{bmatrix}
+k_{1,1} &k_{1,2}  &k_{1,3} \\ 
+k_{2,1} &k_{2,2}  &k_{2,3} \\ 
+k_{3,1} &k_{3,2}  &k_{3,3} 
+\end{bmatrix}
+ \right )
+ %]]></script>
+
+<p>An useful concept that I have already explained is that the covariance matrix describes the degree of correlation between variables. In the previous graphic, <script type="math/tex">f_{1}</script> and <script type="math/tex">f_{2}</script> are closely correlated while <script type="math/tex">f_{1}</script> and <script type="math/tex">f_{3}</script> are less correlated.</p>
+
+<p>How can one build the covariance matrix? It is possible to use a function that describes the similarity between variables and one can interpret this as the correlation degree. These functions are called <em>kernels</em>.</p>
+
+<p>There are many kernel functions out there. They are widely used in machine learning and many methods relay on kernels (like support vector machines). One of the most well-known kernels is the squared exponential kernel:</p>
+
+<script type="math/tex; mode=display">k_{i,j} = e^{\left \| x_{i} - x_{j} \right \|^{2}}</script>
+
+<p>This equation describes the degree of correlation <script type="math/tex">k_{i,j}</script> for two variables <script type="math/tex">x_{i}</script> and <script type="math/tex">x_{j}</script>. It is 0 when the difference between <script type="math/tex">x_{i}</script> and <script type="math/tex">x_{j}</script> is infinite and it is 1 when <script type="math/tex">x_{i}=x_{j}</script>. Hence it describes how similar two variables are: if they have the same value, the result obtained is 1 (maximum similarity) and a value close to 0 when their values are far apart. Having a kernel and the input data one could compute the covariance matrix. For example if we want the component <script type="math/tex">k_{1,2}</script> of the covariance matrix, we can compute:</p>
+
+<script type="math/tex; mode=display">k_{1,2} = e^{\left \| x_{1} - x_{2} \right \|^{2}}</script>
+
+<p>How can one model a new imput <script type="math/tex">x'</script>? Or in other words, what is the value of <script type="math/tex">f'</script> given <script type="math/tex">x'</script>? In machine learning terms, the training data in this example is <script type="math/tex">D=\{(x_{1},f_{1}),(x_{2},f_{2}),(x_{3},f_{3})\}</script>. The value <script type="math/tex">x'</script> is our test data and we wants the value of <script type="math/tex">f'</script>, which could be any value in the dash line in the next figure:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/lr_3.png" width="600" height="450" /></p>
+
+<p>A good assumption in these situations is that when the value of the domain (<script type="math/tex">x</script>) changes a little, the value of range (<script type="math/tex">f</script>) changes also a little. This concept is known as <em>smoothness</em>. We do not see abrupt changes in a variable if we vary the value of another dependent variable.</p>
+
+<p>So in this example the value of <script type="math/tex">f'</script> is likely between the values of <script type="math/tex">f_{2}</script> and <script type="math/tex">f_{3}</script>.</p>
+
+<p>To compute <script type="math/tex">f'</script> we use our assumption that the data come from a Gaussian distribution:</p>
+
+<script type="math/tex; mode=display">f\sim\mathcal{N}(\overrightarrow{0},K)</script>
+
+<p>where <script type="math/tex">f</script> is a vector, <script type="math/tex">\overrightarrow{0}</script> is a vector of zeros (we assume the distribution has zero mean) and <script type="math/tex">K</script> is the covariance matrix. Therefore:</p>
+
+<script type="math/tex; mode=display">f'\sim\mathcal{N}(0,k(x',x'))</script>
+
+<p>Here <script type="math/tex">k(x',x')</script> is the kernel function that computes the similarity of the variable <script type="math/tex">x'</script> and itself, i.e. the variance. Therefore <script type="math/tex">K(x',x')=1</script>. This notation is useful because it allows us to see the relation with kernels.</p>
+
+<p>Since we assumed that our model is smooth, there has to be a correlation between the vector <script type="math/tex">x</script> and <script type="math/tex">x'</script>. If we put them all together in the same multivariate Gaussian distribution we have:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+
+\begin{bmatrix}
+f_{1}\\ 
+f_{2}\\ 
+f_{3}\\ 
+f'
+\end{bmatrix}\sim\mathcal{N}\left ( \begin{bmatrix}
+0\\0\\0\\0
+\end{bmatrix},
+\begin{bmatrix}
+k(x_{1},x_{1}) &k(x_{1},x_{2})  &k(x_{1},x_{3}) &k(x_{1},x')\\ 
+k(x_{2},x_{1}) &k(x_{2},x_{2})  &k(x_{2},x_{3}) &k(x_{2},x')\\ 
+k(x_{3},x_{1}) &k(x_{3},x_{2})  &k(x_{3},x_{3}) &k(x_{3},x')\\ 
+k(x',x_{1}) &k(x',x_{2})  &k(x',x_{3}) &k(x',x')
+\end{bmatrix}
+ \right )
+ %]]></script>
+
+<p>To compute <script type="math/tex">f'</script> we need the conditional probability of <script type="math/tex">f'</script> given the vector <script type="math/tex">f</script>. We can use the theorem given in the <a href="/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/">previous post</a> to compute <script type="math/tex">f'</script>
+and the covariance between <script type="math/tex">x'</script> and <script type="math/tex">x</script>. Therefore, <script type="math/tex">f'</script> is:</p>
+
+<script type="math/tex; mode=display">f'=K_{f'}^{T}K^{-1}f</script>
+
+<p>And the variance is:</p>
+
+<script type="math/tex; mode=display">\sigma^{2}=-K_{f'}^{T}K^{-1}K_{f'} + k(x',x')</script>
+
+<p>where <script type="math/tex">K_{f'}</script> is the column vector <script type="math/tex">[k(x_{1},x'),k(x_{2},x'),k(x_{3},x')]</script> in this example.</p>
+
+<p>The variance indicates the confidence of <script type="math/tex">f'</script>. To understand this more clearly, lets look at the next graphic:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/lr_4.png" width="600" height="450" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+<a href="#n26" name="n26">26</a>
+<a href="#n27" name="n27">27</a>
+<a href="#n28" name="n28">28</a>
+<a href="#n29" name="n29">29</a>
+<strong><a href="#n30" name="n30">30</a></strong>
+<a href="#n31" name="n31">31</a>
+<a href="#n32" name="n32">32</a>
+<a href="#n33" name="n33">33</a>
+<a href="#n34" name="n34">34</a>
+<a href="#n35" name="n35">35</a>
+<a href="#n36" name="n36">36</a>
+<a href="#n37" name="n37">37</a>
+<a href="#n38" name="n38">38</a>
+<a href="#n39" name="n39">39</a>
+<strong><a href="#n40" name="n40">40</a></strong>
+<a href="#n41" name="n41">41</a>
+<a href="#n42" name="n42">42</a>
+<a href="#n43" name="n43">43</a>
+<a href="#n44" name="n44">44</a>
+<a href="#n45" name="n45">45</a>
+<a href="#n46" name="n46">46</a>
+<a href="#n47" name="n47">47</a>
+<a href="#n48" name="n48">48</a>
+<a href="#n49" name="n49">49</a>
+<strong><a href="#n50" name="n50">50</a></strong>
+<a href="#n51" name="n51">51</a>
+</pre></td>
+  <td class="code"><pre><span class="comment">#original code: http://www.cs.ubc.ca/~nando/540-2013/lectures/gp.py</span>
+
+<span class="keyword">from</span> <span class="include">__future__</span> <span class="keyword">import</span> <span class="include">division</span>
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> pl
+
+<span class="docstring"><span class="delimiter">&quot;&quot;&quot;</span><span class="content"> This is code for simple GP regression. It assumes a zero mean GP Prior </span><span class="delimiter">&quot;&quot;&quot;</span></span>
+
+<span class="comment"># This is the true unknown function we are trying to approximate</span>
+f = <span class="keyword">lambda</span> x: (<span class="float">0.5</span>*(x**<span class="integer">2</span>)).flatten()
+
+<span class="comment"># Define the kernel</span>
+<span class="keyword">def</span> <span class="function">kernel</span>(a, b):
+    <span class="docstring"><span class="delimiter">&quot;&quot;&quot;</span><span class="content"> GP squared exponential kernel </span><span class="delimiter">&quot;&quot;&quot;</span></span>
+    kernelParameter = <span class="float">0.1</span>
+    sqdist = np.sum(a**<span class="integer">2</span>,<span class="integer">1</span>).reshape(-<span class="integer">1</span>,<span class="integer">1</span>) + np.sum(b**<span class="integer">2</span>,<span class="integer">1</span>) - <span class="integer">2</span>*np.dot(a, b.T)
+    <span class="keyword">return</span> np.exp(-<span class="float">.5</span> * (<span class="integer">1</span>/kernelParameter) * sqdist)
+
+N = <span class="integer">10</span>         <span class="comment"># number of training points.</span>
+n = <span class="integer">30</span>         <span class="comment"># number of test points.</span>
+s = <span class="float">0.00005</span>    <span class="comment"># noise variance.</span>
+
+<span class="comment"># Sample some input points and noisy versions of the function evaluated at</span>
+<span class="comment"># these points. </span>
+X = np.random.uniform(<span class="integer">0</span>, <span class="integer">5</span>, size=(N,<span class="integer">1</span>))
+y = f(X) + s*np.random.randn(N)
+K = kernel(X, X)
+L = np.linalg.cholesky(K + s*np.eye(N))
+
+<span class="comment"># points we're going to make predictions at.</span>
+Xtest = np.linspace(<span class="integer">0</span>, <span class="integer">5</span>, n).reshape(-<span class="integer">1</span>,<span class="integer">1</span>)
+
+<span class="comment"># compute the mean at our test points.</span>
+Lk = np.linalg.solve(L, kernel(X, Xtest))
+mu = np.dot(Lk.T, np.linalg.solve(L, y))
+
+<span class="comment"># compute the variance at our test points.</span>
+K_ = kernel(Xtest, Xtest)
+s2 = np.diag(K_) - np.sum(Lk**<span class="integer">2</span>, axis=<span class="integer">0</span>)
+s = np.sqrt(s2)
+
+pl.figure(<span class="integer">1</span>)
+pl.clf()
+pl.plot(X, y, <span class="string"><span class="delimiter">'</span><span class="content">r+</span><span class="delimiter">'</span></span>, ms=<span class="integer">20</span>,)
+pl.plot(Xtest, f(Xtest), <span class="string"><span class="delimiter">'</span><span class="content">b-</span><span class="delimiter">'</span></span>)
+pl.gca().fill_between(Xtest.flat, mu-<span class="integer">3</span>*s, mu+<span class="integer">3</span>*s, color=<span class="string"><span class="delimiter">&quot;</span><span class="content">#dddddd</span><span class="delimiter">&quot;</span></span>)
+pl.plot(Xtest, mu, <span class="string"><span class="delimiter">'</span><span class="content">g*</span><span class="delimiter">'</span></span>, ms=<span class="integer">6</span>,)
+pl.savefig(<span class="string"><span class="delimiter">'</span><span class="content">predictive.png</span><span class="delimiter">'</span></span>, bbox_inches=<span class="string"><span class="delimiter">'</span><span class="content">tight</span><span class="delimiter">'</span></span>)
+pl.title(<span class="string"><span class="delimiter">'</span><span class="content">Mean predictions plus 3 st.deviations</span><span class="delimiter">'</span></span>)
+pl.axis([<span class="integer">0</span>, <span class="integer">5</span>, <span class="integer">0</span>, <span class="integer">10</span>])
+pl.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The red crosses are the training data, the green stars are the test points and the blue line is the function we want to estimate through regression. The gray area is 3 times the standard deviation in our model (the variance could be used instead). One can observe that the test points near training points have a small standard deviation; since we assumed that our model is smooth, these test values have less uncertainty (their Gaussian distributions have less variance) when they are close to the training data.</p>
+
+<p>On the other hand, the test points far from any training point have much more variance because we are not sure that these points are right. The test points where <script type="math/tex">X>3.5</script> are not even close to the true function we want to estimate and their variance is much higher.</p>
+
+<p>Now lets see what happens when we add more training data:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/lr_5.png" width="600" height="450" /></p>
+<p><br /></p>
+
+<p>Now the test points fits the function better and the variance is much smaller than the previous scenario.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>The previous regression method is a special case of a Gaussian Process. In the next entry I’ll explain them. There are many things that I left unclear in the python code. They are related to different kernel parameters that allow our regression model to have different behaviors. There are also numeric optimization tricks. I’ll also explain them.</p>
+
+</div>
+  <footer>
+    <div class="articlemeta">
+      <span class="hide">
+        
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/bayesian-optimization/'>bayesian-optimization</a>
+  
+</span>
+
+ @
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-03-08T22:32:48-07:00" pubdate data-updated="true"></time>
+      </span>
+      <span class="plus">
+        
+          <a href="#disqus_thread" onclick="return false;" data-disqus-identifier="http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3/">+</a>
+        
+      </span>
+    </div>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3/" data-via="blackhattrick" data-counturl="http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <div class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/" title="Previous Post: Introduction to Gaussian Processes and Bayesian Optimization (Part 2)">&laquo; Introduction to Gaussian Processes and Bayesian Optimization (Part 2)</a>
+      
+    </div>
+  </footer>
+
+
+</article>
+
+  <section>
+    <div class="hide" id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+    </div>
+    <footer role="contentinfo"><div class="content">
+    Copyright &copy; 2015 Ivan Cruz
+</div>
+
+</footer>
+    <script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = 'io-x';
+    
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+  </div>
+  <script src="/javascripts/modernizr-2.0.js"></script>
+<script src="//ajax.useso.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+<script src="/javascripts/libs/respond.js" type="text/javascript"></script>
+<script src="/javascripts/octopress.js" type="text/javascript"></script>
+
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+  <script type="text/javascript">
+  $(document).ready(function(){
+    if (!window.jXHR){
+      var jxhr = document.createElement('script');
+      jxhr.type = 'text/javascript';
+      jxhr.src = '/javascripts/libs/jXHR.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jxhr, s);
+    }
+
+    github.showRepos({
+      user: 'ivancruzbht',
+      count: 0,
+      skip_forks: true,
+      target: '#gh_repos'
+    });
+  });
+  </script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+  var userAgent = navigator.userAgent.toLowerCase();
+  var isiPhone = (userAgent.indexOf('iphone') != -1 || userAgent.indexOf('ipod') != -1) ? true : false;
+  var isAndroid = (userAgent.indexOf('android') != -1) ? true : false;
+  clickEvent = (isiPhone || isAndroid) ? 'touchstart' : 'click';
+  $('#sidebar').on(clickEvent, function() {
+    $(this).toggleClass('open');
+  });
+  $('.articlemeta').on(clickEvent, function() {
+    toggleDisqus();
+    $(this).toggleClass('open');
+  });
+});
+</script>
+
+</body>
+</html>

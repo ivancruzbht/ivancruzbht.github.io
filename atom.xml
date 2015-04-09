@@ -1,0 +1,846 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Ivan Cruz Blog]]></title>
+  <link href="http://io-x.me/atom.xml" rel="self"/>
+  <link href="http://io-x.me/"/>
+  <updated>2015-04-09T12:26:00-07:00</updated>
+  <id>http://io-x.me/</id>
+  <author>
+    <name><![CDATA[Ivan Cruz]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to Gaussian Processes and Bayesian Optimization (Part 3)]]></title>
+    <link href="http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3/"/>
+    <updated>2015-03-08T22:32:48-07:00</updated>
+    <id>http://io-x.me/blog/2015/03/08/introduction-to-gaussian-processes-and-bayesian-optimization-part-3</id>
+    <content type="html"><![CDATA[<p>In this entry I’ll explain regression and how it is related to Gaussian processes. </p>
+
+<p>In simple terms, regression is a statistic approach to infer a model of the relationship between variables. Namely, it is the relation of independent variables (the input) and a dependent variable (the output).</p>
+
+<!-- more -->
+
+<p>In the context of machine learning, given a bunch of training data, the goal is to compute a model that explains the data.</p>
+
+<p>An example would be linear regression. This method tries to describe the data with a lineal function by minimizing the distance between each point and the function hyperplane. For a 2-dimensional space, the function is a line:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/lr_1.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+<a href="#n26" name="n26">26</a>
+<a href="#n27" name="n27">27</a>
+<a href="#n28" name="n28">28</a>
+<a href="#n29" name="n29">29</a>
+<strong><a href="#n30" name="n30">30</a></strong>
+<a href="#n31" name="n31">31</a>
+<a href="#n32" name="n32">32</a>
+<a href="#n33" name="n33">33</a>
+<a href="#n34" name="n34">34</a>
+<a href="#n35" name="n35">35</a>
+<a href="#n36" name="n36">36</a>
+<a href="#n37" name="n37">37</a>
+<a href="#n38" name="n38">38</a>
+<a href="#n39" name="n39">39</a>
+<strong><a href="#n40" name="n40">40</a></strong>
+<a href="#n41" name="n41">41</a>
+<a href="#n42" name="n42">42</a>
+<a href="#n43" name="n43">43</a>
+<a href="#n44" name="n44">44</a>
+<a href="#n45" name="n45">45</a>
+<a href="#n46" name="n46">46</a>
+<a href="#n47" name="n47">47</a>
+<a href="#n48" name="n48">48</a>
+</pre></td>
+  <td class="code"><pre><span class="comment"># http://scikit-learn.org/stable/auto_examples/linear_model/plot_ols.html</span>
+<span class="comment"># Code source: Jaques Grobler</span>
+<span class="comment"># License: BSD 3 clause</span>
+
+
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">sklearn</span> <span class="keyword">import</span> <span class="include">datasets</span>, <span class="include">linear_model</span>
+
+<span class="comment"># Load the diabetes dataset</span>
+diabetes = datasets.load_diabetes()
+
+
+<span class="comment"># Use only one feature</span>
+diabetes_X = diabetes.data[:, np.newaxis]
+diabetes_X_temp = diabetes_X[:, :, <span class="integer">2</span>]
+
+<span class="comment"># Split the data into training/testing sets</span>
+diabetes_X_train = diabetes_X_temp[:-<span class="integer">20</span>]
+diabetes_X_test = diabetes_X_temp[-<span class="integer">20</span>:]
+
+<span class="comment"># Split the targets into training/testing sets</span>
+diabetes_y_train = diabetes.target[:-<span class="integer">20</span>]
+diabetes_y_test = diabetes.target[-<span class="integer">20</span>:]
+
+<span class="comment"># Create linear regression object</span>
+regr = linear_model.LinearRegression()
+
+<span class="comment"># Train the model using the training sets</span>
+regr.fit(diabetes_X_train, diabetes_y_train)
+
+<span class="comment"># The coefficients</span>
+print(<span class="string"><span class="delimiter">'</span><span class="content">Coefficients: </span><span class="char">\n</span><span class="delimiter">'</span></span>, regr.coef_)
+<span class="comment"># The mean square error</span>
+print(<span class="string"><span class="delimiter">&quot;</span><span class="content">Residual sum of squares: %.2f</span><span class="delimiter">&quot;</span></span>
+      % np.mean((regr.predict(diabetes_X_test) - diabetes_y_test) ** <span class="integer">2</span>))
+<span class="comment"># Explained variance score: 1 is perfect prediction</span>
+print(<span class="string"><span class="delimiter">'</span><span class="content">Variance score: %.2f</span><span class="delimiter">'</span></span> % regr.score(diabetes_X_test, diabetes_y_test))
+
+<span class="comment"># Plot outputs</span>
+plt.scatter(diabetes_X_test, diabetes_y_test,  color=<span class="string"><span class="delimiter">'</span><span class="content">black</span><span class="delimiter">'</span></span>)
+plt.plot(diabetes_X_test, regr.predict(diabetes_X_test), color=<span class="string"><span class="delimiter">'</span><span class="content">blue</span><span class="delimiter">'</span></span>,
+         linewidth=<span class="integer">3</span>)
+
+plt.xticks(())
+plt.yticks(())
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>It is possible to obtain a non-linear regression estimator using Gaussian distributions. For example, suppose you are given some data described by the following graphic:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/lr_2.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+x = np.array([<span class="integer">1</span>,<span class="integer">2</span>,<span class="integer">3</span>]);
+y = np.array([<span class="integer">2</span>,<span class="integer">3</span>,<span class="integer">6</span>]);
+plt.scatter(x,y)
+plt.xlim([<span class="integer">0</span>,<span class="integer">10</span>])
+plt.ylim([<span class="integer">0</span>,<span class="integer">10</span>])
+
+plt.axes().get_xaxis().set_ticks([])
+plt.axes().get_yaxis().set_ticks([])
+
+i = <span class="integer">1</span>
+<span class="keyword">for</span> xy <span class="keyword">in</span> <span class="predefined">zip</span>(x,y):
+    plt.annotate(<span class="string"><span class="delimiter">'</span><span class="content">X{}</span><span class="delimiter">'</span></span>.format(i),xy=(xy[<span class="integer">0</span>],<span class="integer">0</span>),xytext=(xy[<span class="integer">0</span>],-<span class="float">0.5</span>))
+    plt.annotate(<span class="string"><span class="delimiter">'</span><span class="content">Y{}</span><span class="delimiter">'</span></span>.format(i),xy=(<span class="integer">0</span>,xy[<span class="integer">1</span>]), xytext=(-<span class="float">0.5</span>,xy[<span class="integer">1</span>]))
+
+    plt.plot([xy[<span class="integer">0</span>], xy[<span class="integer">0</span>]], [<span class="integer">0</span>, xy[<span class="integer">1</span>]], <span class="string"><span class="delimiter">'</span><span class="content">k:</span><span class="delimiter">'</span></span>)
+    plt.plot([<span class="integer">0</span>, xy[<span class="integer">0</span>]], [xy[<span class="integer">1</span>], xy[<span class="integer">1</span>]], <span class="string"><span class="delimiter">'</span><span class="content">k:</span><span class="delimiter">'</span></span>)
+    i+=<span class="integer">1</span>
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The values of the each point are given (<script type="math/tex">X</script> and <script type="math/tex">f</script>) and we want to model the random variable <script type="math/tex">f</script> in relation with <script type="math/tex">X</script>. We can assume that <script type="math/tex">f</script> can be modeled with a multivariate Gaussian distribution, i.e., each point has a Gaussian distribution by itself. For simplicity, lets say that this distribution has zero mean:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+
+\begin{bmatrix}
+f_{1}\\ 
+f_{2}\\ 
+f_{3}
+\end{bmatrix}\sim\mathcal{N}\left ( \begin{bmatrix}
+0\\0\\0
+\end{bmatrix},
+\begin{bmatrix}
+k_{1,1} &k_{1,2}  &k_{1,3} \\ 
+k_{2,1} &k_{2,2}  &k_{2,3} \\ 
+k_{3,1} &k_{3,2}  &k_{3,3} 
+\end{bmatrix}
+ \right )
+ %]]&gt;</script>
+
+<p>An useful concept that I have already explained is that the covariance matrix describes the degree of correlation between variables. In the previous graphic, <script type="math/tex">f_{1}</script> and <script type="math/tex">f_{2}</script> are closely correlated while <script type="math/tex">f_{1}</script> and <script type="math/tex">f_{3}</script> are less correlated.</p>
+
+<p>How can one build the covariance matrix? It is possible to use a function that describes the similarity between variables and one can interpret this as the correlation degree. These functions are called <em>kernels</em>.</p>
+
+<p>There are many kernel functions out there. They are widely used in machine learning and many methods relay on kernels (like support vector machines). One of the most well-known kernels is the squared exponential kernel:</p>
+
+<script type="math/tex; mode=display">k_{i,j} = e^{\left \| x_{i} - x_{j} \right \|^{2}}</script>
+
+<p>This equation describes the degree of correlation <script type="math/tex">k_{i,j}</script> for two variables <script type="math/tex">x_{i}</script> and <script type="math/tex">x_{j}</script>. It is 0 when the difference between <script type="math/tex">x_{i}</script> and <script type="math/tex">x_{j}</script> is infinite and it is 1 when <script type="math/tex">x_{i}=x_{j}</script>. Hence it describes how similar two variables are: if they have the same value, the result obtained is 1 (maximum similarity) and a value close to 0 when their values are far apart. Having a kernel and the input data one could compute the covariance matrix. For example if we want the component <script type="math/tex">k_{1,2}</script> of the covariance matrix, we can compute:</p>
+
+<script type="math/tex; mode=display">k_{1,2} = e^{\left \| x_{1} - x_{2} \right \|^{2}}</script>
+
+<p>How can one model a new imput <script type="math/tex">x'</script>? Or in other words, what is the value of <script type="math/tex">f'</script> given <script type="math/tex">x'</script>? In machine learning terms, the training data in this example is <script type="math/tex">D=\{(x_{1},f_{1}),(x_{2},f_{2}),(x_{3},f_{3})\}</script>. The value <script type="math/tex">x'</script> is our test data and we wants the value of <script type="math/tex">f'</script>, which could be any value in the dash line in the next figure:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/lr_3.png" width="600" height="450" /></p>
+
+<p>A good assumption in these situations is that when the value of the domain (<script type="math/tex">x</script>) changes a little, the value of range (<script type="math/tex">f</script>) changes also a little. This concept is known as <em>smoothness</em>. We do not see abrupt changes in a variable if we vary the value of another dependent variable.</p>
+
+<p>So in this example the value of <script type="math/tex">f'</script> is likely between the values of <script type="math/tex">f_{2}</script> and <script type="math/tex">f_{3}</script>.</p>
+
+<p>To compute <script type="math/tex">f'</script> we use our assumption that the data come from a Gaussian distribution:</p>
+
+<script type="math/tex; mode=display">f\sim\mathcal{N}(\overrightarrow{0},K)</script>
+
+<p>where <script type="math/tex">f</script> is a vector, <script type="math/tex">\overrightarrow{0}</script> is a vector of zeros (we assume the distribution has zero mean) and <script type="math/tex">K</script> is the covariance matrix. Therefore:</p>
+
+<script type="math/tex; mode=display">f'\sim\mathcal{N}(0,k(x',x'))</script>
+
+<p>Here <script type="math/tex">k(x',x')</script> is the kernel function that computes the similarity of the variable <script type="math/tex">x'</script> and itself, i.e. the variance. Therefore <script type="math/tex">K(x',x')=1</script>. This notation is useful because it allows us to see the relation with kernels.</p>
+
+<p>Since we assumed that our model is smooth, there has to be a correlation between the vector <script type="math/tex">x</script> and <script type="math/tex">x'</script>. If we put them all together in the same multivariate Gaussian distribution we have:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+
+\begin{bmatrix}
+f_{1}\\ 
+f_{2}\\ 
+f_{3}\\ 
+f'
+\end{bmatrix}\sim\mathcal{N}\left ( \begin{bmatrix}
+0\\0\\0\\0
+\end{bmatrix},
+\begin{bmatrix}
+k(x_{1},x_{1}) &k(x_{1},x_{2})  &k(x_{1},x_{3}) &k(x_{1},x')\\ 
+k(x_{2},x_{1}) &k(x_{2},x_{2})  &k(x_{2},x_{3}) &k(x_{2},x')\\ 
+k(x_{3},x_{1}) &k(x_{3},x_{2})  &k(x_{3},x_{3}) &k(x_{3},x')\\ 
+k(x',x_{1}) &k(x',x_{2})  &k(x',x_{3}) &k(x',x')
+\end{bmatrix}
+ \right )
+ %]]&gt;</script>
+
+<p>To compute <script type="math/tex">f'</script> we need the conditional probability of <script type="math/tex">f'</script> given the vector <script type="math/tex">f</script>. We can use the theorem given in the <a href="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/">previous post</a> to compute <script type="math/tex">f'</script>
+and the covariance between <script type="math/tex">x'</script> and <script type="math/tex">x</script>. Therefore, <script type="math/tex">f'</script> is:</p>
+
+<script type="math/tex; mode=display">f'=K_{f'}^{T}K^{-1}f</script>
+
+<p>And the variance is:</p>
+
+<script type="math/tex; mode=display">\sigma^{2}=-K_{f'}^{T}K^{-1}K_{f'} + k(x',x')</script>
+
+<p>where <script type="math/tex">K_{f'}</script> is the column vector <script type="math/tex">[k(x_{1},x'),k(x_{2},x'),k(x_{3},x')]</script> in this example.</p>
+
+<p>The variance indicates the confidence of <script type="math/tex">f'</script>. To understand this more clearly, lets look at the next graphic:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/lr_4.png" width="600" height="450" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+<a href="#n26" name="n26">26</a>
+<a href="#n27" name="n27">27</a>
+<a href="#n28" name="n28">28</a>
+<a href="#n29" name="n29">29</a>
+<strong><a href="#n30" name="n30">30</a></strong>
+<a href="#n31" name="n31">31</a>
+<a href="#n32" name="n32">32</a>
+<a href="#n33" name="n33">33</a>
+<a href="#n34" name="n34">34</a>
+<a href="#n35" name="n35">35</a>
+<a href="#n36" name="n36">36</a>
+<a href="#n37" name="n37">37</a>
+<a href="#n38" name="n38">38</a>
+<a href="#n39" name="n39">39</a>
+<strong><a href="#n40" name="n40">40</a></strong>
+<a href="#n41" name="n41">41</a>
+<a href="#n42" name="n42">42</a>
+<a href="#n43" name="n43">43</a>
+<a href="#n44" name="n44">44</a>
+<a href="#n45" name="n45">45</a>
+<a href="#n46" name="n46">46</a>
+<a href="#n47" name="n47">47</a>
+<a href="#n48" name="n48">48</a>
+<a href="#n49" name="n49">49</a>
+<strong><a href="#n50" name="n50">50</a></strong>
+<a href="#n51" name="n51">51</a>
+</pre></td>
+  <td class="code"><pre><span class="comment">#original code: http://www.cs.ubc.ca/~nando/540-2013/lectures/gp.py</span>
+
+<span class="keyword">from</span> <span class="include">__future__</span> <span class="keyword">import</span> <span class="include">division</span>
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> pl
+
+<span class="docstring"><span class="delimiter">&quot;&quot;&quot;</span><span class="content"> This is code for simple GP regression. It assumes a zero mean GP Prior </span><span class="delimiter">&quot;&quot;&quot;</span></span>
+
+<span class="comment"># This is the true unknown function we are trying to approximate</span>
+f = <span class="keyword">lambda</span> x: (<span class="float">0.5</span>*(x**<span class="integer">2</span>)).flatten()
+
+<span class="comment"># Define the kernel</span>
+<span class="keyword">def</span> <span class="function">kernel</span>(a, b):
+    <span class="docstring"><span class="delimiter">&quot;&quot;&quot;</span><span class="content"> GP squared exponential kernel </span><span class="delimiter">&quot;&quot;&quot;</span></span>
+    kernelParameter = <span class="float">0.1</span>
+    sqdist = np.sum(a**<span class="integer">2</span>,<span class="integer">1</span>).reshape(-<span class="integer">1</span>,<span class="integer">1</span>) + np.sum(b**<span class="integer">2</span>,<span class="integer">1</span>) - <span class="integer">2</span>*np.dot(a, b.T)
+    <span class="keyword">return</span> np.exp(-<span class="float">.5</span> * (<span class="integer">1</span>/kernelParameter) * sqdist)
+
+N = <span class="integer">10</span>         <span class="comment"># number of training points.</span>
+n = <span class="integer">30</span>         <span class="comment"># number of test points.</span>
+s = <span class="float">0.00005</span>    <span class="comment"># noise variance.</span>
+
+<span class="comment"># Sample some input points and noisy versions of the function evaluated at</span>
+<span class="comment"># these points. </span>
+X = np.random.uniform(<span class="integer">0</span>, <span class="integer">5</span>, size=(N,<span class="integer">1</span>))
+y = f(X) + s*np.random.randn(N)
+K = kernel(X, X)
+L = np.linalg.cholesky(K + s*np.eye(N))
+
+<span class="comment"># points we're going to make predictions at.</span>
+Xtest = np.linspace(<span class="integer">0</span>, <span class="integer">5</span>, n).reshape(-<span class="integer">1</span>,<span class="integer">1</span>)
+
+<span class="comment"># compute the mean at our test points.</span>
+Lk = np.linalg.solve(L, kernel(X, Xtest))
+mu = np.dot(Lk.T, np.linalg.solve(L, y))
+
+<span class="comment"># compute the variance at our test points.</span>
+K_ = kernel(Xtest, Xtest)
+s2 = np.diag(K_) - np.sum(Lk**<span class="integer">2</span>, axis=<span class="integer">0</span>)
+s = np.sqrt(s2)
+
+pl.figure(<span class="integer">1</span>)
+pl.clf()
+pl.plot(X, y, <span class="string"><span class="delimiter">'</span><span class="content">r+</span><span class="delimiter">'</span></span>, ms=<span class="integer">20</span>,)
+pl.plot(Xtest, f(Xtest), <span class="string"><span class="delimiter">'</span><span class="content">b-</span><span class="delimiter">'</span></span>)
+pl.gca().fill_between(Xtest.flat, mu-<span class="integer">3</span>*s, mu+<span class="integer">3</span>*s, color=<span class="string"><span class="delimiter">&quot;</span><span class="content">#dddddd</span><span class="delimiter">&quot;</span></span>)
+pl.plot(Xtest, mu, <span class="string"><span class="delimiter">'</span><span class="content">g*</span><span class="delimiter">'</span></span>, ms=<span class="integer">6</span>,)
+pl.savefig(<span class="string"><span class="delimiter">'</span><span class="content">predictive.png</span><span class="delimiter">'</span></span>, bbox_inches=<span class="string"><span class="delimiter">'</span><span class="content">tight</span><span class="delimiter">'</span></span>)
+pl.title(<span class="string"><span class="delimiter">'</span><span class="content">Mean predictions plus 3 st.deviations</span><span class="delimiter">'</span></span>)
+pl.axis([<span class="integer">0</span>, <span class="integer">5</span>, <span class="integer">0</span>, <span class="integer">10</span>])
+pl.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The red crosses are the training data, the green stars are the test points and the blue line is the function we want to estimate through regression. The gray area is 3 times the standard deviation in our model (the variance could be used instead). One can observe that the test points near training points have a small standard deviation; since we assumed that our model is smooth, these test values have less uncertainty (their Gaussian distributions have less variance) when they are close to the training data.</p>
+
+<p>On the other hand, the test points far from any training point have much more variance because we are not sure that these points are right. The test points where <script type="math/tex">X>3.5</script> are not even close to the true function we want to estimate and their variance is much higher.</p>
+
+<p>Now lets see what happens when we add more training data:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/lr_5.png" width="600" height="450" /></p>
+<p><br /></p>
+
+<p>Now the test points fits the function better and the variance is much smaller than the previous scenario.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>The previous regression method is a special case of a Gaussian Process. In the next entry I’ll explain them. There are many things that I left unclear in the python code. They are related to different kernel parameters that allow our regression model to have different behaviors. There are also numeric optimization tricks. I’ll also explain them.</p>
+
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to Gaussian Processes and Bayesian Optimization (Part 2)]]></title>
+    <link href="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/"/>
+    <updated>2015-03-03T12:44:32-08:00</updated>
+    <id>http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2</id>
+    <content type="html"><![CDATA[<p>In the <a href="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/">previous entry</a> I explained the motivations of Bayesian optimization and Gaussian processes. I also gave a quick introduction to Gaussian distributions. In this entry I will continue to give some mathematical background in order to fully understand how Bayesian optimization works.</p>
+
+<!-- more -->
+
+<h3>Joint and Conditional Gaussian Distributions</h3>
+
+<p>Suppose that we have a bi-variate Gaussian distribution that models <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> as shown in the next figure:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_6.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">from</span> <span class="include">mpl_toolkits.mplot3d</span> <span class="keyword">import</span> <span class="include">axes3d</span>
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">from</span> <span class="include">matplotlib</span> <span class="keyword">import</span> <span class="include">cm</span>
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">matplotlib.mlab</span> <span class="keyword">import</span> <span class="include">bivariate_normal</span>
+
+fig = plt.figure()
+ax = fig.gca(projection=<span class="string"><span class="delimiter">'</span><span class="content">3d</span><span class="delimiter">'</span></span>)
+x = np.linspace(-<span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">200</span>)
+y = x
+X,Y = np.meshgrid(x, y)
+Z = bivariate_normal(X, Y)
+ax.plot_surface(X, Y, Z, rstride=<span class="integer">8</span>, cstride=<span class="integer">8</span>, alpha=<span class="float">0.3</span>)
+
+cset = ax.contour(X, Y, Z, zdir=<span class="string"><span class="delimiter">'</span><span class="content">x</span><span class="delimiter">'</span></span>, offset=-<span class="integer">5</span>)
+cset = ax.contour(X, Y, Z, zdir=<span class="string"><span class="delimiter">'</span><span class="content">y</span><span class="delimiter">'</span></span>, offset=<span class="integer">5</span>)
+
+ax.set_xlabel(<span class="string"><span class="delimiter">'</span><span class="content">X1</span><span class="delimiter">'</span></span>)
+ax.set_xlim(-<span class="integer">5</span>, <span class="integer">5</span>)
+ax.set_ylabel(<span class="string"><span class="delimiter">'</span><span class="content">X2</span><span class="delimiter">'</span></span>)
+ax.set_ylim(-<span class="integer">5</span>, <span class="integer">5</span>)
+ax.set_zlabel(<span class="string"><span class="delimiter">'</span><span class="content">P(X1,X2)</span><span class="delimiter">'</span></span>)
+ax.set_zlim(<span class="integer">0</span>, <span class="float">0.2</span>)
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>This is the <em>joint Gaussian distribution</em> of <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> because it jointly models both variables.</p>
+
+<p>Now, a bi-variate Gaussian distribution can be interpreted as many (in fact infinite) univariate Gaussian distributions. For example, in the previous figure, each black line in the Gaussian surface is a univariate Gaussian distribution, both the lines parallel to the <script type="math/tex">X_{1}</script> axis and the lines parallel to the <script type="math/tex">X_{2}</script> axis. </p>
+
+<p>Lets fix the value of one of the random variables. For example, at <script type="math/tex">X_{2}=0</script> we have a univariate distribution (the green Gaussian distribution projected on the left “wall” of the figure); at <script type="math/tex">X_{1}=0</script> we have another gaussian distribution (the second green line in the right “wall”); at <script type="math/tex">X_{2}=1</script> we have another univariate Gaussian distribution (the yellow line).</p>
+
+<p>And what is the name of these distributions. They are <em>conditional probability distributions</em>. The term “conditional” is because they are constrained by a given observation. For example, the Gaussian distribution of <script type="math/tex">X_{2}</script> <em>given</em> that <script type="math/tex">X_{1}</script> is 0 (the green line on the left wall) is expressed like this:</p>
+
+<script type="math/tex; mode=display">P(X_{2}|X_{1} = 0)</script>
+
+<p>or more generally:</p>
+
+<script type="math/tex; mode=display">P(X_{2}|X_{1} = x_{i})</script>
+
+<p>We know that a multivariate Gaussian distribution <script type="math/tex">N(\mu,\Sigma)</script> has a mean <script type="math/tex">\mu</script> and a covariance matrix <script type="math/tex">\Sigma</script> associated to it. A conditional Gaussian distribution also has a mean and a variance associated. How could we obtain <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> of a conditional probability distribution of a multivariate Gaussian given the joint multivariate Gaussian? </p>
+
+<p>The full process is non <a href="http://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions">trivial</a>. It is based on the Schur complement and it involves lots of derivations and algebra. So I’ll skip it and I’ll give the equations to get the mean and the covariance matrix.</p>
+
+<p>Lets say that we have the following joint Gaussian distribution:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+\begin{bmatrix}x_{1} \\ x_{2} \end{bmatrix} \sim \mathcal{N}\left ( \begin{bmatrix}\mu_{1} \\ \mu_{2} \end{bmatrix},\begin{bmatrix}
+\Sigma_{1,1} & \Sigma_{1,2}\\ 
+\Sigma_{2,1} & \Sigma_{2,2}
+\end{bmatrix} \right )
+ %]]&gt;</script>
+
+<p>And we want to compute the following conditional distribution:</p>
+
+<script type="math/tex; mode=display">P(X_{1}|X_{2} = x_{2})</script>
+
+<p>then the mean <script type="math/tex">\mu_{1\|2}</script> is:</p>
+
+<script type="math/tex; mode=display">\mu_{1|2}=\mu_{1}+\Sigma_{1,2}(\Sigma_{2,2})^{-1}(x_{2}-\mu_{2})</script>
+
+<p>The variance is:</p>
+
+<script type="math/tex; mode=display">\Sigma_{1|2}=\Sigma_{1,1}-\Sigma_{1,2}(\Sigma_{1,1})^{-1}\Sigma_{2,1}</script>
+
+<p>What about multivariate Gaussian distributions with more random variables? We can use the same equations. We form a random vector <script type="math/tex">X \in \mathbb{R}^{n}</script> with the random variable <script type="math/tex">x_{1},...,x_{n}</script>, then split it in two vectors <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script>. The random variables in <script type="math/tex">X_{2}</script> are the observed variables and the random variables in <script type="math/tex">X_{1}</script> are the conditional distribution variables. We do the same to get each component of <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script></p>
+
+<h3>Sampling</h3>
+
+<p>Sampling, as I explained in a <a href="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/">previous entry</a>, is the act of produce data under a probability distribution. Sampling a random variable <script type="math/tex">X</script> from a Gaussian distribution with mean <script type="math/tex">\mu</script> and variance <script type="math/tex">\Sigma</script> is denoted like this:</p>
+
+<script type="math/tex; mode=display"> X \sim \mathcal{N}\left ( \mu,\Sigma \right ) </script>
+
+<p>How do we sample from a Gaussian distribution? The procedure used is called <a href="http://en.wikipedia.org/wiki/Inverse_transform_sampling">inverse transform sampling</a>. To get the intuition of how it works, I need to explain probability distributions a little bit further.</p>
+
+<p>Each probability distribution can be specified in different ways. Until now I have been specifying them as <em>probability density functions</em>, which describes the likelihood of a random variable to take a given value.</p>
+
+<p>It is also possible to describe a probability distribution with a <em>cumulative distribution function</em> (cfd). This type of distributions describe the area under the probability density function from minus infinity to the actual value of the random variable evaluated:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_7.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">scipy.stats</span> <span class="keyword">as</span> stats
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+x = np.linspace(<span class="integer">0</span>,<span class="integer">100</span>,<span class="integer">100</span>)
+cdf = stats.binom.cdf
+plt.plot(x,cdf(x, <span class="integer">250</span>, <span class="float">0.2</span>))
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br />
+The domain of the graphic describe the values of a random variable in this particular cdf, and the range describes the area. Note that the maximum value of such area is one because this is a probability function.</p>
+
+<p>The inverse transform sampling method uses a cdf. For the case of a univariate Gaussian with <script type="math/tex">\mu=0</script> and <script type="math/tex">\sigma^{2}=1</script> the procedure is the following:</p>
+
+<ol>
+	<li>Sample a random number from an <a href="http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29"> uniform distribution function</a>. This number $u$ must have a range $0 \leq u \leq 1$. A uniform distribution is just a probability distribution where every value of a random variable has the same probability.</li>
+	<li>Project this number as the range of the cumulative distribution function, i.e. $u$ is the area described by the cumulative distribution.</li>
+	<li>Obtain the domain value of the cumulative distribution function, i.e., the value of a random variable given that its area is $u$.</li>
+</ol>
+
+<p>An example is described in the next graphic:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_8.png" width="600" height="450" /></p>
+
+<p>We have this cumulative distribution function, then we can sample a number from 0 to 1. In this case is 0.5 (shown as the red line), we project this value in the distribution range an the value of the domain is the value returned, in this case is 50 (shown as the blue line).</p>
+
+<p>For the case of sampling from univariate Gaussian probability distribution with an arbitrary value of $\mu$ and $\sigma^{2}$ we can use the previous method for sampling $X \sim \mathcal{N}(0,1)$ as follow:</p>
+
+<script type="math/tex; mode=display">X_{i}\sim \mathcal{N}(\mu,\sigma^{2}) = \mu + \sigma \mathcal{N}(0,1)</script>
+
+<p>i.e. multiply the sample of a distribution <script type="math/tex">\mathcal{N}(0,1)</script> by the square root of the variance (the standard deviation) and add the mean.</p>
+
+<p>For the case of a multivariate Gaussian probability distribution with an arbitrary value of $\mu$ and $\Sigma$, the method is similar:</p>
+
+<script type="math/tex; mode=display">X_{i}\sim \mathcal{N}(\mu,\Sigma) = \mu + \mathcal{L} \mathcal{N}(0,I)</script>
+
+<p>where $I$ is the identity matrix and $\mathcal{L}$ is the squared root matrix of the covariance matrix $\Sigma$. This matrix $\mathcal{L}$ can be obtained using the <a href="http://en.wikipedia.org/wiki/Cholesky_decomposition">Cholesky decomposition</a>. This method can express a matrix as a multiplication of another matrix and its transpose, i.e.:</p>
+
+<script type="math/tex; mode=display">\Sigma=\mathcal{L}\mathcal{L}^{T}</script>
+
+<p>With these methods one can sample from any Gaussian distribution.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>In the next entry I’ll explain how these ideas fit in the context of regression.</p>
+]]></content>
+  </entry>
+  
+  <entry>
+    <title type="html"><![CDATA[Introduction to Gaussian Processes and Bayesian Optimization (Part 1)]]></title>
+    <link href="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/"/>
+    <updated>2015-02-26T22:21:22-08:00</updated>
+    <id>http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization</id>
+    <content type="html"><![CDATA[<p>Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. </p>
+
+<!-- more -->
+
+<p>Many machine learning methods have a set of parameters that need to be tuned manually. And I don’t mean the inherent parameters of a given model (such as the weight of synapses between neurons in a neural network or the parameters of a kernel), but to those parameters of the prior knowledge. For example, in a neural network, they could be the number of layers, how many neurons each layer have, the learning rate used during training, which activation function should be used, whether to use stochastic gradient decent or AdaGrad as the optimization method, or how many epoch run during training.</p>
+
+<p>It would be great to have an automatic method that finds out the best set of these hyperparameters and not to depend on some machine learning guru (which may not be available when you need it) to set these parameters. </p>
+
+<p>There are a couple of methods to tune these hyperparameters. The most widely used is grid search. There are also methods based on genetic algorithms and evolutive computing. Nowadays, Bayesian optimization is gaining a lot of attention and with good reasons: it is elegant, it has solid theoretic foundations and more importantly, it works quite well.</p>
+
+<p>In this series of entries I will explain the basics of Bayesian optimization. To do that, I’ll give an overview of Gaussian processes. And I’ll start by giving the basics of normal distributions, covariance matrix and other mathematical background. </p>
+
+<p>If you really want to learn this stuff with someone that really knows these topics, I highly recommend the Gaussian processes lectures given by Nando de Freitas in his <a href="https://www.youtube.com/channel/UC0z_jCi0XWqI8awUuQRFnyw">youtube channel</a>. For now, I’ll keep babbling here for awhile.</p>
+
+<h3>Gaussian Distributions</h3>
+
+<p>A gaussian distribution is a probability distribution where the majority of observations are near of a value, called the mean.</p>
+
+<p>This distributions have a bell-shaped form as shown in the next figure:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_0.png" width="600" height="450" title="Normal distribution" alt="Normal Distribution" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">import</span> <span class="include">matplotlib.mlab</span> <span class="keyword">as</span> mlab
+<span class="keyword">import</span> <span class="include">math</span>
+
+mean = <span class="integer">0</span>
+variance = <span class="integer">1</span>
+sigma = math.sqrt(variance)
+x = np.linspace(-<span class="integer">3</span>,<span class="integer">3</span>,<span class="integer">100</span>)
+plt.plot(x,mlab.normpdf(x,mean,sigma))
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br />
+These type of distribution are described by its <em>mean</em> and its <em>standard deviation</em>. The mean is the average value of an element in the data and it is represented by the greek letter <script type="math/tex">\mu</script>. The standard deviation can be interpreted as how much a given observation can vary from the mean and is represented as <script type="math/tex">\sigma</script>. The <em>variance</em> of a given distribution is the squared standard deviation and it can be used instead. The probability distribution of a univariate Gaussian distribution is:</p>
+
+<script type="math/tex; mode=display">\mathcal{N}(x,\mu,\sigma)=\frac{1}{\sqrt{2\pi\sigma^{2}}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}</script>
+
+<p>A <em>multivariate Gaussian distribution</em> is the same Gaussian distribution but more than one random variable. The graphic of a multivariate Gaussian distribution with 2 variables would be something like this:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_2.png" width="600" height="450" title="Multivariate Normal distribution" alt="Multivariate Normal Distribution" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">matplotlib</span> <span class="keyword">import</span> <span class="include">pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">from</span> <span class="include">matplotlib.mlab</span> <span class="keyword">import</span> <span class="include">bivariate_normal</span>
+<span class="keyword">from</span> <span class="include">mpl_toolkits.mplot3d</span> <span class="keyword">import</span> <span class="include">Axes3D</span>
+
+fig = plt.figure(figsize=(<span class="integer">10</span>, <span class="integer">7</span>))
+ax = fig.gca(projection=<span class="string"><span class="delimiter">'</span><span class="content">3d</span><span class="delimiter">'</span></span>)
+x = np.linspace(-<span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">200</span>)
+y = x
+X,Y = np.meshgrid(x, y)
+Z = bivariate_normal(X, Y)
+surf = ax.plot_surface(X, Y, Z, rstride=<span class="integer">1</span>, cstride=<span class="integer">1</span>, cmap=plt.cm.coolwarm,
+        linewidth=<span class="integer">0</span>, antialiased=<span class="predefined-constant">False</span>)
+
+ax.set_zlim(<span class="integer">0</span>, <span class="float">0.2</span>)
+
+ax.zaxis.set_major_locator(plt.LinearLocator(<span class="integer">10</span>))
+ax.zaxis.set_major_formatter(plt.FormatStrFormatter(<span class="string"><span class="delimiter">'</span><span class="content">%.02f</span><span class="delimiter">'</span></span>))
+
+fig.colorbar(surf, shrink=<span class="float">0.5</span>, aspect=<span class="integer">7</span>, cmap=plt.cm.coolwarm)
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The probability distribution of a multivariate gaussian distributions is:</p>
+
+<script type="math/tex; mode=display">\mathcal{N}(\overline{x},\mu,\Sigma)=\frac{1}{\sqrt{(2\pi)^{k}\left | \Sigma \right |}}e^{\frac{1}{2}(\overline{x}-\mu)^{T}\Sigma^{-1}(\overline{x}-\mu)}</script>
+
+<p>What is <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> in this case? I will explain it with an example. Suppose you have a bunch of data represented by two random variables <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> as shown in the next graphic:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_1.png" width="600" height="450" title="Some random data" alt="some random data" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+mean = [<span class="integer">0</span>,<span class="integer">0</span>]
+covariance = np.identity(<span class="integer">2</span>)
+data = np.random.multivariate_normal(mean,covariance,<span class="integer">100</span>)
+plt.scatter(data[:,<span class="integer">0</span>],data[:,<span class="integer">1</span>])
+plt.xlim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.ylim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.xlabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X1</span><span class="delimiter">&quot;</span></span>)
+plt.ylabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X2</span><span class="delimiter">&quot;</span></span>)
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>You want to find out what probability distribution generated that data. Since we have 2 variables involved, the distribution is multivariate. So we have to learn what multivariate distribution fits the data. </p>
+
+<p>Lets assume that those point were generated under a multivariate Gaussian distribution. So each point <script type="math/tex"> x \in \mathbb{R}^{2} </script> is a 2-dimentional vector <em>sampled</em> from this distribution. This is expressed like this:</p>
+
+<script type="math/tex; mode=display"> x \sim \mathcal{N}\left ( \mu,\Sigma \right ) </script>
+
+<p>So this distribution is our <em>model</em> of the data. Lets see if it is possible infer the distribution. One can observe that the middle of that cluster of points is near to 0 in both variables, i.e. the coordinates <script type="math/tex">(0,0)</script>, so it is fair to assume that the mean of the distribution is 0 for both random variables. Therefore the mean <script type="math/tex"> \mu </script> is a vector where the number of components is the number of random variables:</p>
+
+<script type="math/tex; mode=display"> \mu = \begin{bmatrix} \mu_{1} \\ \mu_{2} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix} </script>
+
+<h3>Covariance matrix</h3>
+
+<p>What about the variance? Since our distribution is multivariate, our variance is in function of all random variables and the variance of each random variable no longer depends on itself. It depends also of the other variables. It is a <em>correlation</em> between these variables. So this correlation, lets call it <script type="math/tex">\Sigma</script>, is a square matrix of size <script type="math/tex">d \times d</script>, i.e. <script type="math/tex">\Sigma \in \mathbb{R}^{d \times d}</script>. In our example we have 2 random variables so <script type="math/tex"> \Sigma \in \mathbb{R}^{2 \times 2}</script> and it is the <em>covariance matrix</em>:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+ \Sigma = \begin{bmatrix} \Sigma_{1,1} && \Sigma_{1,2} \\ \Sigma_{2,1} && \Sigma_{2,2} \end{bmatrix}  %]]&gt;</script>
+
+<p>A particular element <script type="math/tex">\Sigma_{m,n}</script> is the covariance between the random variables <script type="math/tex">m</script> and <script type="math/tex">n</script>, i.e. the correlation between <script type="math/tex">X_{m}</script> and <script type="math/tex">X_{n}</script>. If <script type="math/tex">m=n</script> then <script type="math/tex">\Sigma_{m,n}</script> is the variance of <script type="math/tex">X_{m}</script>.</p>
+
+<p>How should one interpret this correlation? Lets look at the next graphic:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_3.png" width="600" height="450" title="Some random data" alt="some random data" /></p>
+<p><br /></p>
+
+<p>The red dotted line is <script type="math/tex">X_{1}=1.5</script>. At this point, <script type="math/tex">X_{2}</script> can be both positive or negative, so <script type="math/tex">X_{1}</script> does not tell us too much about <script type="math/tex">X_{2}</script>, or in other words, <script type="math/tex">X_{1}</script> is not correlated to <script type="math/tex">X_{2}</script>.</p>
+
+<p>On the other hand, lets look the next figure:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_4.png" width="600" height="450" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+mean = [<span class="integer">0</span>,<span class="integer">0</span>]
+covariance = np.identity(<span class="integer">2</span>)
+covariance[<span class="integer">0</span>,<span class="integer">1</span>] = <span class="float">0.9</span>
+covariance[<span class="integer">1</span>,<span class="integer">0</span>] = <span class="float">0.9</span>
+data = np.random.multivariate_normal(mean,covariance,<span class="integer">100</span>)
+plt.scatter(data[:,<span class="integer">0</span>],data[:,<span class="integer">1</span>])
+plt.xlim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.ylim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.xlabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X1</span><span class="delimiter">&quot;</span></span>)
+plt.ylabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X2</span><span class="delimiter">&quot;</span></span>)
+plt.axhline(y=<span class="integer">0</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">k</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">--</span><span class="delimiter">'</span></span>)
+plt.axvline(x=<span class="integer">0</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">k</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">--</span><span class="delimiter">'</span></span>)
+plt.axvline(x=<span class="float">1.5</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">r</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">:</span><span class="delimiter">'</span></span>)
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>At <script type="math/tex">X_{1}=1.5</script>, <script type="math/tex">X_{2}>0</script> for every point. Moreover one can observe that as the value of <script type="math/tex">X_{2}</script> increases for each point, so does the value of <script type="math/tex">X_{2}</script>. Likewise, if <script type="math/tex">X_{1}</script> decreases, so does <script type="math/tex">X_{2}</script>. We can conclude that there is a linear correlation between both variables. So for the case the variables are not correlated, <script type="math/tex">\Sigma</script> could be:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+ \Sigma = \begin{bmatrix} 1 && 0 \\ 0 && 1 \end{bmatrix}  %]]&gt;</script>
+
+<p>where <script type="math/tex">\Sigma_{1,2}=\Sigma_{2,1}=0</script>, i.e. there is no correlation between <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script>. For the case where there is a correlation, <script type="math/tex">\Sigma</script> could be something like this:</p>
+
+<script type="math/tex; mode=display">% &lt;![CDATA[
+ \Sigma = \begin{bmatrix} 1 && 0.9 \\ 0.9 && 1 \end{bmatrix}  %]]&gt;</script>
+
+<p>If you check the python code of the previous figure, this is the <script type="math/tex">\Sigma</script> used.</p>
+
+<h3>Maximum Likelihood Estimation</h3>
+
+<p>By now you must be asking yourself “All this is nice, but how can we compute <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> given a bunch of data?”</p>
+
+<p>Lets suppose that we know the data model is a probability distribution (in our case, a Gaussian probability distribution). So it is fair to assume that these points were the most likely to be sampled because they have the highest probability. In other words, a model (parametrized by <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script>) that explains the data better is the model chosen. This principle is called Maximum Likelihood Estimation and it can be exploited to infer <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script>.</p>
+
+<p>How to get <script type="math/tex">\mu</script>? Lets look at the next figure:</p>
+
+<p align="center"><img class="center" src="http://io-x.me/images/bayesian_optimization/nd_5.png" width="600" height="450" /></p>
+
+<p>The value of <script type="math/tex">\mu</script> is where the probability is the highest. The red line represents the tangent at that point and its slope is 0. Therefore the value of <script type="math/tex">\mu</script> is where the derivative of the probability function is 0. Converting the Gaussian probability distribution function to logarithmic space to facilitate the math, doing a bunch of derivations and setting the derivate to zero, <script type="math/tex">\mu</script> is:</p>
+
+<script type="math/tex; mode=display">\mu_{ML}=\frac{1}{N}\sum_{n=1}^{N}x_{n}</script>
+
+<p>which is the average of the data. Doing a similar process, <script type="math/tex">\Sigma</script> is:</p>
+
+<script type="math/tex; mode=display">\Sigma_{ML} = \frac{1}{N}\sum_{n=1}^{N}(x_{n}-\mu)(x_{n}-\mu)^{T}</script>
+
+<p>The <script type="math/tex">_{ML}</script> subindex just indicates that these parameters work under the principle of maximum likelihood expectation.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>In the next entry I will explain joint Gaussian distributions, conditional Gaussian distributions and sampling, which are basic concepts to understand Gaussian processes.</p>
+]]></content>
+  </entry>
+  
+</feed>

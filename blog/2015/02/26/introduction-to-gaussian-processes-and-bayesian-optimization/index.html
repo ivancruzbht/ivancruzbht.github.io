@@ -1,0 +1,529 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Introduction to Gaussian Processes and Bayesian Optimization (Part 1) - Ivan Cruz Blog</title>
+  <meta name="author" content="Ivan Cruz">
+
+  
+  <meta name="description" content="Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non &hellip;">
+  
+
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  
+  <link rel="canonical" href="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ivan Cruz Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Source+Serif+Pro' rel='stylesheet' type='text/css'>
+
+<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-60296239-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <div id="sidebar_control"></div>
+  <div id="sidebar">
+    <div class="logo">
+      io-x
+    </div>
+    <div class="content hide">
+      <section role="navigation">
+        <header role="banner"><hgroup>
+	<style type="text/css">
+		.circular img {
+			width: 100px;
+			height: 100px;
+			border-radius: 150px;
+			-webkit-border-radius: 150px;
+			-moz-border-radius: 150px;
+			display: block;
+			margin: 0px 0px 20px 20px;
+			background-color: #b0c4de;
+		}
+	</style>
+
+	<span>
+		<div class="circular">
+			<img class="left" src="/images/yo5.jpg" width="200" height="200" title="image" alt="images">
+		</div>
+	</span>
+
+  <h1><a href="/">Ivan Cruz Blog</a></h1>
+  
+    <h2>A quest of natural language processing, machine learning and random CS</h2>
+  
+</hgroup>
+
+</header>
+        
+<ul class="main-navigation">
+  <li><a href="/">Home</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+
+      </section>
+      
+        <section>
+    <a href="https://www.twitter.com/blackhattrick">
+    	<i class="fa fa-twitter sidebar"></i>
+    </a>
+    <a href="http://mx.linkedin.com/pub/ivan-cruz/ab/370/697/es">
+    	<i class="fa fa-linkedin sidebar"></i>
+    </a>
+    <a href="https://github.com/ivancruzbht">
+    	<i class="fa fa-github sidebar"></i>
+    </a>
+    <a href="mailto:ivancruz.bht@gmail.com">
+    	<i class="fa fa-envelope sidebar"></i>
+    </a>
+</section>
+
+
+      
+    </div>
+  </div>
+  <div id="main">
+    <div class="content">
+      <article class="hentry" role="article">
+  
+  
+    <header>
+      <div class="back"><a href="/" onclick="history.go(-1);return false;">← Back</a></div>
+      <h1 class="entry-title">Introduction to Gaussian Processes and Bayesian Optimization (Part 1)</h1>
+    </header>
+  
+  <div class="entry-content"><p>Gaussian processes have been around for quite some time. They are a set of useful tools widely used in machine learning because they can compute non linear classifiers. Moreover, they are becoming quite important since the advent of Bayesian optimization. And what is Bayesian optimization? In simple terms, it is a methodology to find the best set of <em>hyperparameters</em> in an experiment. </p>
+
+<!-- more -->
+
+<p>Many machine learning methods have a set of parameters that need to be tuned manually. And I don’t mean the inherent parameters of a given model (such as the weight of synapses between neurons in a neural network or the parameters of a kernel), but to those parameters of the prior knowledge. For example, in a neural network, they could be the number of layers, how many neurons each layer have, the learning rate used during training, which activation function should be used, whether to use stochastic gradient decent or AdaGrad as the optimization method, or how many epoch run during training.</p>
+
+<p>It would be great to have an automatic method that finds out the best set of these hyperparameters and not to depend on some machine learning guru (which may not be available when you need it) to set these parameters. </p>
+
+<p>There are a couple of methods to tune these hyperparameters. The most widely used is grid search. There are also methods based on genetic algorithms and evolutive computing. Nowadays, Bayesian optimization is gaining a lot of attention and with good reasons: it is elegant, it has solid theoretic foundations and more importantly, it works quite well.</p>
+
+<p>In this series of entries I will explain the basics of Bayesian optimization. To do that, I’ll give an overview of Gaussian processes. And I’ll start by giving the basics of normal distributions, covariance matrix and other mathematical background. </p>
+
+<p>If you really want to learn this stuff with someone that really knows these topics, I highly recommend the Gaussian processes lectures given by Nando de Freitas in his <a href="https://www.youtube.com/channel/UC0z_jCi0XWqI8awUuQRFnyw">youtube channel</a>. For now, I’ll keep babbling here for awhile.</p>
+
+<h3>Gaussian Distributions</h3>
+
+<p>A gaussian distribution is a probability distribution where the majority of observations are near of a value, called the mean.</p>
+
+<p>This distributions have a bell-shaped form as shown in the next figure:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_0.png" width="600" height="450" title="Normal distribution" alt="Normal Distribution" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">import</span> <span class="include">matplotlib.mlab</span> <span class="keyword">as</span> mlab
+<span class="keyword">import</span> <span class="include">math</span>
+
+mean = <span class="integer">0</span>
+variance = <span class="integer">1</span>
+sigma = math.sqrt(variance)
+x = np.linspace(-<span class="integer">3</span>,<span class="integer">3</span>,<span class="integer">100</span>)
+plt.plot(x,mlab.normpdf(x,mean,sigma))
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br />
+These type of distribution are described by its <em>mean</em> and its <em>standard deviation</em>. The mean is the average value of an element in the data and it is represented by the greek letter <script type="math/tex">\mu</script>. The standard deviation can be interpreted as how much a given observation can vary from the mean and is represented as <script type="math/tex">\sigma</script>. The <em>variance</em> of a given distribution is the squared standard deviation and it can be used instead. The probability distribution of a univariate Gaussian distribution is:</p>
+
+<script type="math/tex; mode=display">\mathcal{N}(x,\mu,\sigma)=\frac{1}{\sqrt{2\pi\sigma^{2}}}e^{-\frac{(x-\mu)^2}{2\sigma^2}}</script>
+
+<p>A <em>multivariate Gaussian distribution</em> is the same Gaussian distribution but more than one random variable. The graphic of a multivariate Gaussian distribution with 2 variables would be something like this:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_2.png" width="600" height="450" title="Multivariate Normal distribution" alt="Multivariate Normal Distribution" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">matplotlib</span> <span class="keyword">import</span> <span class="include">pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">from</span> <span class="include">matplotlib.mlab</span> <span class="keyword">import</span> <span class="include">bivariate_normal</span>
+<span class="keyword">from</span> <span class="include">mpl_toolkits.mplot3d</span> <span class="keyword">import</span> <span class="include">Axes3D</span>
+
+fig = plt.figure(figsize=(<span class="integer">10</span>, <span class="integer">7</span>))
+ax = fig.gca(projection=<span class="string"><span class="delimiter">'</span><span class="content">3d</span><span class="delimiter">'</span></span>)
+x = np.linspace(-<span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">200</span>)
+y = x
+X,Y = np.meshgrid(x, y)
+Z = bivariate_normal(X, Y)
+surf = ax.plot_surface(X, Y, Z, rstride=<span class="integer">1</span>, cstride=<span class="integer">1</span>, cmap=plt.cm.coolwarm,
+        linewidth=<span class="integer">0</span>, antialiased=<span class="predefined-constant">False</span>)
+
+ax.set_zlim(<span class="integer">0</span>, <span class="float">0.2</span>)
+
+ax.zaxis.set_major_locator(plt.LinearLocator(<span class="integer">10</span>))
+ax.zaxis.set_major_formatter(plt.FormatStrFormatter(<span class="string"><span class="delimiter">'</span><span class="content">%.02f</span><span class="delimiter">'</span></span>))
+
+fig.colorbar(surf, shrink=<span class="float">0.5</span>, aspect=<span class="integer">7</span>, cmap=plt.cm.coolwarm)
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>The probability distribution of a multivariate gaussian distributions is:</p>
+
+<script type="math/tex; mode=display">\mathcal{N}(\overline{x},\mu,\Sigma)=\frac{1}{\sqrt{(2\pi)^{k}\left | \Sigma \right |}}e^{\frac{1}{2}(\overline{x}-\mu)^{T}\Sigma^{-1}(\overline{x}-\mu)}</script>
+
+<p>What is <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> in this case? I will explain it with an example. Suppose you have a bunch of data represented by two random variables <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> as shown in the next graphic:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_1.png" width="600" height="450" title="Some random data" alt="some random data" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+mean = [<span class="integer">0</span>,<span class="integer">0</span>]
+covariance = np.identity(<span class="integer">2</span>)
+data = np.random.multivariate_normal(mean,covariance,<span class="integer">100</span>)
+plt.scatter(data[:,<span class="integer">0</span>],data[:,<span class="integer">1</span>])
+plt.xlim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.ylim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.xlabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X1</span><span class="delimiter">&quot;</span></span>)
+plt.ylabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X2</span><span class="delimiter">&quot;</span></span>)
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>You want to find out what probability distribution generated that data. Since we have 2 variables involved, the distribution is multivariate. So we have to learn what multivariate distribution fits the data. </p>
+
+<p>Lets assume that those point were generated under a multivariate Gaussian distribution. So each point <script type="math/tex"> x \in \mathbb{R}^{2} </script> is a 2-dimentional vector <em>sampled</em> from this distribution. This is expressed like this:</p>
+
+<script type="math/tex; mode=display"> x \sim \mathcal{N}\left ( \mu,\Sigma \right ) </script>
+
+<p>So this distribution is our <em>model</em> of the data. Lets see if it is possible infer the distribution. One can observe that the middle of that cluster of points is near to 0 in both variables, i.e. the coordinates <script type="math/tex">(0,0)</script>, so it is fair to assume that the mean of the distribution is 0 for both random variables. Therefore the mean <script type="math/tex"> \mu </script> is a vector where the number of components is the number of random variables:</p>
+
+<script type="math/tex; mode=display"> \mu = \begin{bmatrix} \mu_{1} \\ \mu_{2} \end{bmatrix} = \begin{bmatrix} 0 \\ 0 \end{bmatrix} </script>
+
+<h3>Covariance matrix</h3>
+
+<p>What about the variance? Since our distribution is multivariate, our variance is in function of all random variables and the variance of each random variable no longer depends on itself. It depends also of the other variables. It is a <em>correlation</em> between these variables. So this correlation, lets call it <script type="math/tex">\Sigma</script>, is a square matrix of size <script type="math/tex">d \times d</script>, i.e. <script type="math/tex">\Sigma \in \mathbb{R}^{d \times d}</script>. In our example we have 2 random variables so <script type="math/tex"> \Sigma \in \mathbb{R}^{2 \times 2}</script> and it is the <em>covariance matrix</em>:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+ \Sigma = \begin{bmatrix} \Sigma_{1,1} && \Sigma_{1,2} \\ \Sigma_{2,1} && \Sigma_{2,2} \end{bmatrix}  %]]></script>
+
+<p>A particular element <script type="math/tex">\Sigma_{m,n}</script> is the covariance between the random variables <script type="math/tex">m</script> and <script type="math/tex">n</script>, i.e. the correlation between <script type="math/tex">X_{m}</script> and <script type="math/tex">X_{n}</script>. If <script type="math/tex">m=n</script> then <script type="math/tex">\Sigma_{m,n}</script> is the variance of <script type="math/tex">X_{m}</script>.</p>
+
+<p>How should one interpret this correlation? Lets look at the next graphic:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_3.png" width="600" height="450" title="Some random data" alt="some random data" /></p>
+<p><br /></p>
+
+<p>The red dotted line is <script type="math/tex">X_{1}=1.5</script>. At this point, <script type="math/tex">X_{2}</script> can be both positive or negative, so <script type="math/tex">X_{1}</script> does not tell us too much about <script type="math/tex">X_{2}</script>, or in other words, <script type="math/tex">X_{1}</script> is not correlated to <script type="math/tex">X_{2}</script>.</p>
+
+<p>On the other hand, lets look the next figure:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_4.png" width="600" height="450" /></p>
+
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+mean = [<span class="integer">0</span>,<span class="integer">0</span>]
+covariance = np.identity(<span class="integer">2</span>)
+covariance[<span class="integer">0</span>,<span class="integer">1</span>] = <span class="float">0.9</span>
+covariance[<span class="integer">1</span>,<span class="integer">0</span>] = <span class="float">0.9</span>
+data = np.random.multivariate_normal(mean,covariance,<span class="integer">100</span>)
+plt.scatter(data[:,<span class="integer">0</span>],data[:,<span class="integer">1</span>])
+plt.xlim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.ylim([-<span class="integer">10</span>,<span class="integer">10</span>])
+plt.xlabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X1</span><span class="delimiter">&quot;</span></span>)
+plt.ylabel(<span class="string"><span class="delimiter">&quot;</span><span class="content">X2</span><span class="delimiter">&quot;</span></span>)
+plt.axhline(y=<span class="integer">0</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">k</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">--</span><span class="delimiter">'</span></span>)
+plt.axvline(x=<span class="integer">0</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">k</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">--</span><span class="delimiter">'</span></span>)
+plt.axvline(x=<span class="float">1.5</span>, color=<span class="string"><span class="delimiter">'</span><span class="content">r</span><span class="delimiter">'</span></span>,linestyle=<span class="string"><span class="delimiter">'</span><span class="content">:</span><span class="delimiter">'</span></span>)
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>At <script type="math/tex">X_{1}=1.5</script>, <script type="math/tex">X_{2}>0</script> for every point. Moreover one can observe that as the value of <script type="math/tex">X_{2}</script> increases for each point, so does the value of <script type="math/tex">X_{2}</script>. Likewise, if <script type="math/tex">X_{1}</script> decreases, so does <script type="math/tex">X_{2}</script>. We can conclude that there is a linear correlation between both variables. So for the case the variables are not correlated, <script type="math/tex">\Sigma</script> could be:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+ \Sigma = \begin{bmatrix} 1 && 0 \\ 0 && 1 \end{bmatrix}  %]]></script>
+
+<p>where <script type="math/tex">\Sigma_{1,2}=\Sigma_{2,1}=0</script>, i.e. there is no correlation between <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script>. For the case where there is a correlation, <script type="math/tex">\Sigma</script> could be something like this:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+ \Sigma = \begin{bmatrix} 1 && 0.9 \\ 0.9 && 1 \end{bmatrix}  %]]></script>
+
+<p>If you check the python code of the previous figure, this is the <script type="math/tex">\Sigma</script> used.</p>
+
+<h3>Maximum Likelihood Estimation</h3>
+
+<p>By now you must be asking yourself “All this is nice, but how can we compute <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> given a bunch of data?”</p>
+
+<p>Lets suppose that we know the data model is a probability distribution (in our case, a Gaussian probability distribution). So it is fair to assume that these points were the most likely to be sampled because they have the highest probability. In other words, a model (parametrized by <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script>) that explains the data better is the model chosen. This principle is called Maximum Likelihood Estimation and it can be exploited to infer <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script>.</p>
+
+<p>How to get <script type="math/tex">\mu</script>? Lets look at the next figure:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_5.png" width="600" height="450" /></p>
+
+<p>The value of <script type="math/tex">\mu</script> is where the probability is the highest. The red line represents the tangent at that point and its slope is 0. Therefore the value of <script type="math/tex">\mu</script> is where the derivative of the probability function is 0. Converting the Gaussian probability distribution function to logarithmic space to facilitate the math, doing a bunch of derivations and setting the derivate to zero, <script type="math/tex">\mu</script> is:</p>
+
+<script type="math/tex; mode=display">\mu_{ML}=\frac{1}{N}\sum_{n=1}^{N}x_{n}</script>
+
+<p>which is the average of the data. Doing a similar process, <script type="math/tex">\Sigma</script> is:</p>
+
+<script type="math/tex; mode=display">\Sigma_{ML} = \frac{1}{N}\sum_{n=1}^{N}(x_{n}-\mu)(x_{n}-\mu)^{T}</script>
+
+<p>The <script type="math/tex">_{ML}</script> subindex just indicates that these parameters work under the principle of maximum likelihood expectation.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>In the next entry I will explain joint Gaussian distributions, conditional Gaussian distributions and sampling, which are basic concepts to understand Gaussian processes.</p>
+</div>
+  <footer>
+    <div class="articlemeta">
+      <span class="hide">
+        
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/optimization/'>optimization</a>
+  
+</span>
+
+ @
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-02-26T22:21:22-08:00" pubdate data-updated="true"></time>
+      </span>
+      <span class="plus">
+        
+          <a href="#disqus_thread" onclick="return false;" data-disqus-identifier="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/">+</a>
+        
+      </span>
+    </div>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/" data-via="blackhattrick" data-counturl="http://io-x.me/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <div class="meta">
+      
+    </div>
+  </footer>
+
+
+</article>
+
+  <section>
+    <div class="hide" id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+    </div>
+    <footer role="contentinfo"><div class="content">
+    Copyright &copy; 2015 Ivan Cruz
+</div>
+
+</footer>
+    <script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = 'io-x';
+    
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+  </div>
+  <script src="/javascripts/modernizr-2.0.js"></script>
+<script src="//ajax.useso.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+<script src="/javascripts/libs/respond.js" type="text/javascript"></script>
+<script src="/javascripts/octopress.js" type="text/javascript"></script>
+
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+  <script type="text/javascript">
+  $(document).ready(function(){
+    if (!window.jXHR){
+      var jxhr = document.createElement('script');
+      jxhr.type = 'text/javascript';
+      jxhr.src = '/javascripts/libs/jXHR.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jxhr, s);
+    }
+
+    github.showRepos({
+      user: 'ivancruzbht',
+      count: 0,
+      skip_forks: true,
+      target: '#gh_repos'
+    });
+  });
+  </script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+  var userAgent = navigator.userAgent.toLowerCase();
+  var isiPhone = (userAgent.indexOf('iphone') != -1 || userAgent.indexOf('ipod') != -1) ? true : false;
+  var isAndroid = (userAgent.indexOf('android') != -1) ? true : false;
+  clickEvent = (isiPhone || isAndroid) ? 'touchstart' : 'click';
+  $('#sidebar').on(clickEvent, function() {
+    $(this).toggleClass('open');
+  });
+  $('.articlemeta').on(clickEvent, function() {
+    toggleDisqus();
+    $(this).toggleClass('open');
+  });
+});
+</script>
+
+</body>
+</html>

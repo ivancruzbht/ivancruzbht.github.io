@@ -1,0 +1,454 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Introduction to Gaussian Processes and Bayesian Optimization (Part 2) - Ivan Cruz Blog</title>
+  <meta name="author" content="Ivan Cruz">
+
+  
+  <meta name="description" content="In the previous entry I explained the motivations of Bayesian optimization and Gaussian processes. I also gave a quick introduction to Gaussian &hellip;">
+  
+
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  
+  <link rel="canonical" href="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/atom.xml" rel="alternate" title="Ivan Cruz Blog" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Source+Serif+Pro' rel='stylesheet' type='text/css'>
+
+<!-- mathjax config similar to math.stackexchange -->
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  jax: ["input/TeX", "output/HTML-CSS"],
+  tex2jax: {
+    inlineMath: [ ['$', '$'] ],
+    displayMath: [ ['$$', '$$']],
+    processEscapes: true,
+    skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+  },
+  messageStyle: "none",
+  "HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"] }
+});
+</script>
+<script src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML" type="text/javascript"></script>
+  
+  <script type="text/javascript">
+    var _gaq = _gaq || [];
+    _gaq.push(['_setAccount', 'UA-60296239-1']);
+    _gaq.push(['_setDomainName','github.io']);
+    _gaq.push(['_trackPageview']);
+
+    (function() {
+      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+    })();
+  </script>
+
+
+</head>
+
+<body   >
+  <div id="sidebar_control"></div>
+  <div id="sidebar">
+    <div class="logo">
+      io-x
+    </div>
+    <div class="content hide">
+      <section role="navigation">
+        <header role="banner"><hgroup>
+	<style type="text/css">
+		.circular img {
+			width: 100px;
+			height: 100px;
+			border-radius: 150px;
+			-webkit-border-radius: 150px;
+			-moz-border-radius: 150px;
+			display: block;
+			margin: 0px 0px 20px 20px;
+			background-color: #b0c4de;
+		}
+	</style>
+
+	<span>
+		<div class="circular">
+			<img class="left" src="/images/yo5.jpg" width="200" height="200" title="image" alt="images">
+		</div>
+	</span>
+
+  <h1><a href="/">Ivan Cruz Blog</a></h1>
+  
+    <h2>A quest of natural language processing, machine learning and random CS</h2>
+  
+</hgroup>
+
+</header>
+        
+<ul class="main-navigation">
+  <li><a href="/">Home</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+  <li><a href="/about">About</a></li>
+</ul>
+
+
+      </section>
+      
+        <section>
+    <a href="https://www.twitter.com/blackhattrick">
+    	<i class="fa fa-twitter sidebar"></i>
+    </a>
+    <a href="http://mx.linkedin.com/pub/ivan-cruz/ab/370/697/es">
+    	<i class="fa fa-linkedin sidebar"></i>
+    </a>
+    <a href="https://github.com/ivancruzbht">
+    	<i class="fa fa-github sidebar"></i>
+    </a>
+    <a href="mailto:ivancruz.bht@gmail.com">
+    	<i class="fa fa-envelope sidebar"></i>
+    </a>
+</section>
+
+
+      
+    </div>
+  </div>
+  <div id="main">
+    <div class="content">
+      <article class="hentry" role="article">
+  
+  
+    <header>
+      <div class="back"><a href="/" onclick="history.go(-1);return false;">← Back</a></div>
+      <h1 class="entry-title">Introduction to Gaussian Processes and Bayesian Optimization (Part 2)</h1>
+    </header>
+  
+  <div class="entry-content"><p>In the <a href="/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/">previous entry</a> I explained the motivations of Bayesian optimization and Gaussian processes. I also gave a quick introduction to Gaussian distributions. In this entry I will continue to give some mathematical background in order to fully understand how Bayesian optimization works.</p>
+
+<!-- more -->
+
+<h3>Joint and Conditional Gaussian Distributions</h3>
+
+<p>Suppose that we have a bi-variate Gaussian distribution that models <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> as shown in the next figure:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_6.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+<a href="#n9" name="n9">9</a>
+<strong><a href="#n10" name="n10">10</a></strong>
+<a href="#n11" name="n11">11</a>
+<a href="#n12" name="n12">12</a>
+<a href="#n13" name="n13">13</a>
+<a href="#n14" name="n14">14</a>
+<a href="#n15" name="n15">15</a>
+<a href="#n16" name="n16">16</a>
+<a href="#n17" name="n17">17</a>
+<a href="#n18" name="n18">18</a>
+<a href="#n19" name="n19">19</a>
+<strong><a href="#n20" name="n20">20</a></strong>
+<a href="#n21" name="n21">21</a>
+<a href="#n22" name="n22">22</a>
+<a href="#n23" name="n23">23</a>
+<a href="#n24" name="n24">24</a>
+<a href="#n25" name="n25">25</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">from</span> <span class="include">mpl_toolkits.mplot3d</span> <span class="keyword">import</span> <span class="include">axes3d</span>
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">from</span> <span class="include">matplotlib</span> <span class="keyword">import</span> <span class="include">cm</span>
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+<span class="keyword">from</span> <span class="include">matplotlib.mlab</span> <span class="keyword">import</span> <span class="include">bivariate_normal</span>
+
+fig = plt.figure()
+ax = fig.gca(projection=<span class="string"><span class="delimiter">'</span><span class="content">3d</span><span class="delimiter">'</span></span>)
+x = np.linspace(-<span class="integer">5</span>, <span class="integer">5</span>, <span class="integer">200</span>)
+y = x
+X,Y = np.meshgrid(x, y)
+Z = bivariate_normal(X, Y)
+ax.plot_surface(X, Y, Z, rstride=<span class="integer">8</span>, cstride=<span class="integer">8</span>, alpha=<span class="float">0.3</span>)
+
+cset = ax.contour(X, Y, Z, zdir=<span class="string"><span class="delimiter">'</span><span class="content">x</span><span class="delimiter">'</span></span>, offset=-<span class="integer">5</span>)
+cset = ax.contour(X, Y, Z, zdir=<span class="string"><span class="delimiter">'</span><span class="content">y</span><span class="delimiter">'</span></span>, offset=<span class="integer">5</span>)
+
+ax.set_xlabel(<span class="string"><span class="delimiter">'</span><span class="content">X1</span><span class="delimiter">'</span></span>)
+ax.set_xlim(-<span class="integer">5</span>, <span class="integer">5</span>)
+ax.set_ylabel(<span class="string"><span class="delimiter">'</span><span class="content">X2</span><span class="delimiter">'</span></span>)
+ax.set_ylim(-<span class="integer">5</span>, <span class="integer">5</span>)
+ax.set_zlabel(<span class="string"><span class="delimiter">'</span><span class="content">P(X1,X2)</span><span class="delimiter">'</span></span>)
+ax.set_zlim(<span class="integer">0</span>, <span class="float">0.2</span>)
+
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br /></p>
+
+<p>This is the <em>joint Gaussian distribution</em> of <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script> because it jointly models both variables.</p>
+
+<p>Now, a bi-variate Gaussian distribution can be interpreted as many (in fact infinite) univariate Gaussian distributions. For example, in the previous figure, each black line in the Gaussian surface is a univariate Gaussian distribution, both the lines parallel to the <script type="math/tex">X_{1}</script> axis and the lines parallel to the <script type="math/tex">X_{2}</script> axis. </p>
+
+<p>Lets fix the value of one of the random variables. For example, at <script type="math/tex">X_{2}=0</script> we have a univariate distribution (the green Gaussian distribution projected on the left “wall” of the figure); at <script type="math/tex">X_{1}=0</script> we have another gaussian distribution (the second green line in the right “wall”); at <script type="math/tex">X_{2}=1</script> we have another univariate Gaussian distribution (the yellow line).</p>
+
+<p>And what is the name of these distributions. They are <em>conditional probability distributions</em>. The term “conditional” is because they are constrained by a given observation. For example, the Gaussian distribution of <script type="math/tex">X_{2}</script> <em>given</em> that <script type="math/tex">X_{1}</script> is 0 (the green line on the left wall) is expressed like this:</p>
+
+<script type="math/tex; mode=display">P(X_{2}|X_{1} = 0)</script>
+
+<p>or more generally:</p>
+
+<script type="math/tex; mode=display">P(X_{2}|X_{1} = x_{i})</script>
+
+<p>We know that a multivariate Gaussian distribution <script type="math/tex">N(\mu,\Sigma)</script> has a mean <script type="math/tex">\mu</script> and a covariance matrix <script type="math/tex">\Sigma</script> associated to it. A conditional Gaussian distribution also has a mean and a variance associated. How could we obtain <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script> of a conditional probability distribution of a multivariate Gaussian given the joint multivariate Gaussian? </p>
+
+<p>The full process is non <a href="http://en.wikipedia.org/wiki/Multivariate_normal_distribution#Conditional_distributions">trivial</a>. It is based on the Schur complement and it involves lots of derivations and algebra. So I’ll skip it and I’ll give the equations to get the mean and the covariance matrix.</p>
+
+<p>Lets say that we have the following joint Gaussian distribution:</p>
+
+<script type="math/tex; mode=display">% <![CDATA[
+\begin{bmatrix}x_{1} \\ x_{2} \end{bmatrix} \sim \mathcal{N}\left ( \begin{bmatrix}\mu_{1} \\ \mu_{2} \end{bmatrix},\begin{bmatrix}
+\Sigma_{1,1} & \Sigma_{1,2}\\ 
+\Sigma_{2,1} & \Sigma_{2,2}
+\end{bmatrix} \right )
+ %]]></script>
+
+<p>And we want to compute the following conditional distribution:</p>
+
+<script type="math/tex; mode=display">P(X_{1}|X_{2} = x_{2})</script>
+
+<p>then the mean <script type="math/tex">\mu_{1\|2}</script> is:</p>
+
+<script type="math/tex; mode=display">\mu_{1|2}=\mu_{1}+\Sigma_{1,2}(\Sigma_{2,2})^{-1}(x_{2}-\mu_{2})</script>
+
+<p>The variance is:</p>
+
+<script type="math/tex; mode=display">\Sigma_{1|2}=\Sigma_{1,1}-\Sigma_{1,2}(\Sigma_{1,1})^{-1}\Sigma_{2,1}</script>
+
+<p>What about multivariate Gaussian distributions with more random variables? We can use the same equations. We form a random vector <script type="math/tex">X \in \mathbb{R}^{n}</script> with the random variable <script type="math/tex">x_{1},...,x_{n}</script>, then split it in two vectors <script type="math/tex">X_{1}</script> and <script type="math/tex">X_{2}</script>. The random variables in <script type="math/tex">X_{2}</script> are the observed variables and the random variables in <script type="math/tex">X_{1}</script> are the conditional distribution variables. We do the same to get each component of <script type="math/tex">\mu</script> and <script type="math/tex">\Sigma</script></p>
+
+<h3>Sampling</h3>
+
+<p>Sampling, as I explained in a <a href="/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/">previous entry</a>, is the act of produce data under a probability distribution. Sampling a random variable <script type="math/tex">X</script> from a Gaussian distribution with mean <script type="math/tex">\mu</script> and variance <script type="math/tex">\Sigma</script> is denoted like this:</p>
+
+<script type="math/tex; mode=display"> X \sim \mathcal{N}\left ( \mu,\Sigma \right ) </script>
+
+<p>How do we sample from a Gaussian distribution? The procedure used is called <a href="http://en.wikipedia.org/wiki/Inverse_transform_sampling">inverse transform sampling</a>. To get the intuition of how it works, I need to explain probability distributions a little bit further.</p>
+
+<p>Each probability distribution can be specified in different ways. Until now I have been specifying them as <em>probability density functions</em>, which describes the likelihood of a random variable to take a given value.</p>
+
+<p>It is also possible to describe a probability distribution with a <em>cumulative distribution function</em> (cfd). This type of distributions describe the area under the probability density function from minus infinity to the actual value of the random variable evaluated:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_7.png" width="600" height="450" /></p>
+<div class="highlighter-coderay"><table class="CodeRay"><tr>
+  <td class="line-numbers"><pre><a href="#n1" name="n1">1</a>
+<a href="#n2" name="n2">2</a>
+<a href="#n3" name="n3">3</a>
+<a href="#n4" name="n4">4</a>
+<a href="#n5" name="n5">5</a>
+<a href="#n6" name="n6">6</a>
+<a href="#n7" name="n7">7</a>
+<a href="#n8" name="n8">8</a>
+</pre></td>
+  <td class="code"><pre><span class="keyword">import</span> <span class="include">scipy.stats</span> <span class="keyword">as</span> stats
+<span class="keyword">import</span> <span class="include">matplotlib.pyplot</span> <span class="keyword">as</span> plt
+<span class="keyword">import</span> <span class="include">numpy</span> <span class="keyword">as</span> np
+
+x = np.linspace(<span class="integer">0</span>,<span class="integer">100</span>,<span class="integer">100</span>)
+cdf = stats.binom.cdf
+plt.plot(x,cdf(x, <span class="integer">250</span>, <span class="float">0.2</span>))
+plt.show()
+</pre></td>
+</tr></table>
+</div>
+<p><br />
+The domain of the graphic describe the values of a random variable in this particular cdf, and the range describes the area. Note that the maximum value of such area is one because this is a probability function.</p>
+
+<p>The inverse transform sampling method uses a cdf. For the case of a univariate Gaussian with <script type="math/tex">\mu=0</script> and <script type="math/tex">\sigma^{2}=1</script> the procedure is the following:</p>
+
+<ol>
+	<li>Sample a random number from an <a href="http://en.wikipedia.org/wiki/Uniform_distribution_%28continuous%29"> uniform distribution function</a>. This number $u$ must have a range $0 \leq u \leq 1$. A uniform distribution is just a probability distribution where every value of a random variable has the same probability.</li>
+	<li>Project this number as the range of the cumulative distribution function, i.e. $u$ is the area described by the cumulative distribution.</li>
+	<li>Obtain the domain value of the cumulative distribution function, i.e., the value of a random variable given that its area is $u$.</li>
+</ol>
+
+<p>An example is described in the next graphic:</p>
+
+<p align="center"><img class="center" src="/images/bayesian_optimization/nd_8.png" width="600" height="450" /></p>
+
+<p>We have this cumulative distribution function, then we can sample a number from 0 to 1. In this case is 0.5 (shown as the red line), we project this value in the distribution range an the value of the domain is the value returned, in this case is 50 (shown as the blue line).</p>
+
+<p>For the case of sampling from univariate Gaussian probability distribution with an arbitrary value of $\mu$ and $\sigma^{2}$ we can use the previous method for sampling $X \sim \mathcal{N}(0,1)$ as follow:</p>
+
+<script type="math/tex; mode=display">X_{i}\sim \mathcal{N}(\mu,\sigma^{2}) = \mu + \sigma \mathcal{N}(0,1)</script>
+
+<p>i.e. multiply the sample of a distribution <script type="math/tex">\mathcal{N}(0,1)</script> by the square root of the variance (the standard deviation) and add the mean.</p>
+
+<p>For the case of a multivariate Gaussian probability distribution with an arbitrary value of $\mu$ and $\Sigma$, the method is similar:</p>
+
+<script type="math/tex; mode=display">X_{i}\sim \mathcal{N}(\mu,\Sigma) = \mu + \mathcal{L} \mathcal{N}(0,I)</script>
+
+<p>where $I$ is the identity matrix and $\mathcal{L}$ is the squared root matrix of the covariance matrix $\Sigma$. This matrix $\mathcal{L}$ can be obtained using the <a href="http://en.wikipedia.org/wiki/Cholesky_decomposition">Cholesky decomposition</a>. This method can express a matrix as a multiplication of another matrix and its transpose, i.e.:</p>
+
+<script type="math/tex; mode=display">\Sigma=\mathcal{L}\mathcal{L}^{T}</script>
+
+<p>With these methods one can sample from any Gaussian distribution.</p>
+
+<h3>What&#8217;s next?</h3>
+
+<p>In the next entry I’ll explain how these ideas fit in the context of regression.</p>
+</div>
+  <footer>
+    <div class="articlemeta">
+      <span class="hide">
+        
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/bayesian-optimization/'>bayesian-optimization</a>
+  
+</span>
+
+ @
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-03-03T12:44:32-08:00" pubdate data-updated="true"></time>
+      </span>
+      <span class="plus">
+        
+          <a href="#disqus_thread" onclick="return false;" data-disqus-identifier="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/">+</a>
+        
+      </span>
+    </div>
+    
+      <div class="sharing">
+  
+  <a href="//twitter.com/share" class="twitter-share-button" data-url="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/" data-via="blackhattrick" data-counturl="http://io-x.me/blog/2015/03/03/introduction-to-gaussian-processes-and-bayesian-optimization-part-2/" >Tweet</a>
+  
+  
+  
+</div>
+
+    
+    <div class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2015/02/26/introduction-to-gaussian-processes-and-bayesian-optimization/" title="Previous Post: Introduction to Gaussian Processes and Bayesian Optimization (Part 1)">&laquo; Introduction to Gaussian Processes and Bayesian Optimization (Part 1)</a>
+      
+    </div>
+  </footer>
+
+
+</article>
+
+  <section>
+    <div class="hide" id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+
+    </div>
+    <footer role="contentinfo"><div class="content">
+    Copyright &copy; 2015 Ivan Cruz
+</div>
+
+</footer>
+    <script type="text/javascript">
+    /* * * CONFIGURATION VARIABLES * * */
+    var disqus_shortname = 'io-x';
+    
+    /* * * DON'T EDIT BELOW THIS LINE * * */
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript>
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = '//platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+  </div>
+  <script src="/javascripts/modernizr-2.0.js"></script>
+<script src="//ajax.useso.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script>!window.jQuery && document.write(unescape('%3Cscript src="/javascripts/libs/jquery.min.js"%3E%3C/script%3E'))</script>
+<script src="/javascripts/libs/respond.js" type="text/javascript"></script>
+<script src="/javascripts/octopress.js" type="text/javascript"></script>
+
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+  <script type="text/javascript">
+  $(document).ready(function(){
+    if (!window.jXHR){
+      var jxhr = document.createElement('script');
+      jxhr.type = 'text/javascript';
+      jxhr.src = '/javascripts/libs/jXHR.js';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jxhr, s);
+    }
+
+    github.showRepos({
+      user: 'ivancruzbht',
+      count: 0,
+      skip_forks: true,
+      target: '#gh_repos'
+    });
+  });
+  </script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){
+  var userAgent = navigator.userAgent.toLowerCase();
+  var isiPhone = (userAgent.indexOf('iphone') != -1 || userAgent.indexOf('ipod') != -1) ? true : false;
+  var isAndroid = (userAgent.indexOf('android') != -1) ? true : false;
+  clickEvent = (isiPhone || isAndroid) ? 'touchstart' : 'click';
+  $('#sidebar').on(clickEvent, function() {
+    $(this).toggleClass('open');
+  });
+  $('.articlemeta').on(clickEvent, function() {
+    toggleDisqus();
+    $(this).toggleClass('open');
+  });
+});
+</script>
+
+</body>
+</html>
