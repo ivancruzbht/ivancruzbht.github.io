@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Bayesian-optimization | Ivan Cruz Blog]]></title>
   <link href="http://io-x.me/blog/categories/bayesian-optimization/atom.xml" rel="self"/>
   <link href="http://io-x.me/"/>
-  <updated>2015-04-09T12:48:45-07:00</updated>
+  <updated>2015-04-09T17:10:48-07:00</updated>
   <id>http://io-x.me/</id>
   <author>
     <name><![CDATA[Ivan Cruz]]></name>
@@ -184,7 +184,7 @@ plt.show()
 </div>
 <p><br /></p>
 
-<p>The values of the each point are given (<script type="math/tex">X</script> and <script type="math/tex">f</script>) and we want to model the random variable <script type="math/tex">f</script> in relation with <script type="math/tex">X</script>. We can assume that <script type="math/tex">f</script> can be modeled with a multivariate Gaussian distribution, i.e., each point has a Gaussian distribution by itself. For simplicity, lets say that this distribution has zero mean:</p>
+<p>The values of the each point are given (<script type="math/tex">X</script> and <script type="math/tex">f</script>) and we want to model the random variable <script type="math/tex">f</script> in relation with <script type="math/tex">X</script>. We can assume that <script type="math/tex">f</script> is modeled with a multivariate Gaussian distribution, i.e., each point has a Gaussian distribution by itself. For simplicity, lets say that this distribution has zero mean:</p>
 
 <script type="math/tex; mode=display">% &lt;![CDATA[
 
@@ -219,7 +219,7 @@ k_{3,1} &k_{3,2}  &k_{3,3}
 
 <p align="center"><img class="center" src="/images/bayesian_optimization/lr_3.png" width="600" height="450"></p>
 
-<p>A good assumption in these situations is that when the value of the domain (<script type="math/tex">x</script>) changes a little, the value of range (<script type="math/tex">f</script>) changes also a little. This concept is known as <em>smoothness</em>. We do not see abrupt changes in a variable if we vary the value of another dependent variable.</p>
+<p>A good assumption in these situations is that when the value of the domain (<script type="math/tex">x</script>) changes a little, the value of range (<script type="math/tex">f</script>) changes also a little. This concept is known as <em>smoothness</em>. We do not see abrupt changes in the data.</p>
 
 <p>So in this example the value of <script type="math/tex">f'</script> is likely between the values of <script type="math/tex">f_{2}</script> and <script type="math/tex">f_{3}</script>.</p>
 
