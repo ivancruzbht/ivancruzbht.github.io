@@ -4,7 +4,7 @@
   <title><![CDATA[Ivan Cruz Blog]]></title>
   <link href="http://io-x.me/atom.xml" rel="self"/>
   <link href="http://io-x.me/"/>
-  <updated>2015-04-12T10:54:04-07:00</updated>
+  <updated>2015-04-12T10:55:36-07:00</updated>
   <id>http://io-x.me/</id>
   <author>
     <name><![CDATA[Ivan Cruz]]></name>
@@ -598,7 +598,7 @@ The domain of the graphic describe the values of a random variable in this parti
 
 <p>In this series of entries I will explain the basics of Bayesian optimization. To do that, I’ll give an overview of Gaussian processes. And I’ll start by giving the basics of normal distributions, covariance matrix and other mathematical background. </p>
 
-<p>If you really want to learn this stuff with someone that really knows these topics, I highly recommend the Gaussian processes lectures given by Nando de Freitas (Oxford university, Google DeepMind) in his <a href="https://www.youtube.com/channel/UC0z_jCi0XWqI8awUuQRFnyw">youtube channel</a>. For now, I’ll keep babbling here for awhile.</p>
+<p>If you really want to learn this stuff with someone that really knows these topics, I highly recommend the Gaussian processes lectures given by Nando de Freitas (Oxford university, Google DeepMind) in his <a href="https://www.youtube.com/channel/UC0z_jCi0XWqI8awUuQRFnyw">youtube channel</a>.</p>
 
 <h3>Gaussian Distributions</h3>
 
